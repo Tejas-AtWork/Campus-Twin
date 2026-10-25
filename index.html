@@ -1,0 +1,2990 @@
+<!DOCTYPE html>
+<html lang="en" class="dark"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Digital Twin | CampusTwin</title>
+  <meta name="description" content="CampusTwin builds a digital twin of your college campus. Test energy, water and waste ideas in a what-if simulator and see the cost, payback and carbon savings in rupees before you spend.">
+  <meta name="theme-color" content="#080c14">
+  <meta name="color-scheme" content="dark">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="CampusTwin: Smart Campus Digital Twin and Decarbonization Platform">
+  <meta property="og:description" content="Test energy, water and waste ideas on a digital model of your campus and see the payback before you spend.">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com/">
+  <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace']
+          },
+          colors: {
+            twin: {
+              dark: '#080c14',
+              card: '#0f172a',
+              cardHover: '#1e293b',
+              border: '#1e293b',
+              energy: '#f59e0b',
+              water: '#06b6d4',
+              waste: '#10b981',
+              thermal: '#f43f5e'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { background-color: #080c14; font-family: 'Inter', sans-serif; color: #f1f5f9; }
+    .glass-nav { background: rgba(11, 17, 32, 0.92); backdrop-filter: blur(16px); border-bottom: 1px solid rgba(51, 65, 85, 0.5); }
+    .glass-card { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(12px); border: 1px solid #1e293b; }
+    .glass-card:hover { border-color: #334155; }
+    .glow-emerald { box-shadow: 0 0 25px -5px rgba(16, 185, 129, 0.25); }
+    .glow-cyan { box-shadow: 0 0 25px -5px rgba(6, 182, 212, 0.25); }
+    .glow-amber { box-shadow: 0 0 25px -5px rgba(245, 158, 11, 0.25); }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #080c14; }
+    ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #334155; }
+
+    /* Interactive SVG Map Hover Styling */
+    .campus-bldg-node { cursor: pointer; transition: all 0.2s ease; }
+    .campus-bldg-node:hover rect { stroke: #10b981; stroke-width: 2px; filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.4)); }
+    .campus-bldg-node:hover text { fill: #34d399; }
+
+    /* Page-change transition: the shared header strip and the page content slide aside together */
+    main#main { overflow-x: clip; }
+    .flow-btn.flow-active { color: #ffffff; background: rgba(16, 185, 129, 0.2); border-color: rgba(52, 211, 153, 0.8); box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.3), 0 0 14px -2px rgba(16, 185, 129, 0.5); }
+    .fac-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border-radius: 6px; background: #1e293b; color: #cbd5e1; font-size: 10px; font-family: 'JetBrains Mono', monospace; }
+
+    /* Accessibility */
+    .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+    .sr-only-focusable:focus { position:fixed; top:8px; left:8px; width:auto; height:auto; margin:0; padding:10px 16px; clip:auto; z-index:100; background:#10b981; color:#022c22; font-weight:700; border-radius:8px; }
+    :focus-visible { outline: 2px solid #34d399 !important; outline-offset: 2px; }
+    .text-slate-500 { color: #94a3b8 !important; }  /* contrast: slate-500 on this background is below 4.5:1 */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+    }
+    /* --- v4: overflow safety net, mobile toast, footer links, tap targets --- */
+    html, body { max-width: 100%; overflow-x: clip; }
+    img, svg, video, canvas { max-width: 100%; }
+    pre { max-width: 100%; }
+    #appToast { left: 1rem !important; right: 1rem; max-width: none !important; bottom: 1rem !important; }
+    @media (min-width: 640px) { #appToast { right: auto; left: 1.5rem !important; max-width: 24rem !important; bottom: 1.5rem !important; } }
+    .footer-link { display: inline-flex; align-items: center; min-height: 40px; padding: 0 .6rem; border-radius: .5rem; color: #cbd5e1; text-decoration: none; }
+    .footer-link:hover { color: #34d399; text-decoration: underline; }
+    #mobileMenu button { min-height: 44px; }
+    @media (max-width: 767px) { header button, main button, footer button { min-height: 40px; } }
+    @media print {
+      body { background: #ffffff !important; color: #000000 !important; }
+      header, nav, footer, .glass-nav, #tab-customizer, #tab-twin, #tab-simulator, #tab-connect, #autoDemoBanner, .demo-flow-strip { display: none !important; }
+      #reportModal { display: block !important; position: static !important; background: #ffffff !important; padding: 0 !important; }
+      #reportModal > div { max-width: 100% !important; background: #ffffff !important; border: 1px solid #cbd5e1 !important; box-shadow: none !important; color: #0f172a !important; }
+      #reportModal button { display: none !important; }
+      #reportModal .text-white { color: #0f172a !important; }
+      #reportModal .text-slate-300, #reportModal .text-slate-400 { color: #334155 !important; }
+      #reportModal .bg-slate-950, #reportModal .bg-slate-900 { background: #f8fafc !important; border: 1px solid #e2e8f0 !important; }
+      #reportModal .text-emerald-400 { color: #059669 !important; }
+      #reportModal .text-cyan-400 { color: #0891b2 !important; }
+      #reportModal .text-teal-400 { color: #0d9488 !important; }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-emerald-500 selection:text-white antialiased">
+  <a href="#main" class="sr-only sr-only-focusable">Skip to main content</a>
+  <div id="a11yAnnouncer" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
+  <div id="appToast" class="hidden" role="status" aria-live="polite"></div>
+
+  <!-- TOP HEADER -->
+  <header class="sticky top-0 z-50 glass-nav">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      
+      <!-- Brand & Beacon -->
+      <a href="/" onclick="goHome(event)" aria-label="CampusTwin home: go to the digital twin" class="flex items-center space-x-3 rounded-lg min-w-0">
+        <div class="relative w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 via-teal-500 to-cyan-400 p-0.5 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+          <div class="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center font-extrabold text-emerald-400 text-lg">
+            CT
+          </div>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="font-extrabold text-lg tracking-tight text-white">
+              Campus<span class="text-emerald-400">Twin</span>
+            </span>
+            <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hidden sm:flex items-center space-x-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+              <span>SMART CAMPUS TWIN</span>
+            </span>
+          </div>
+          <p class="text-[11px] text-slate-400 hidden sm:block">Real-Time Decarbonization &amp; Utility Resource Optimization</p>
+        </div>
+      </a>
+
+      <!-- Navigation Tabs (4 Core Pillars) -->
+      <nav aria-label="Main sections" class="hidden md:block"><div id="mainTablist" role="tablist" aria-label="CampusTwin steps" class="flex items-center space-x-1 bg-slate-900/90 p-1 rounded-xl border border-slate-800 text-xs font-semibold">
+        <button role="tab" id="nav-customizer" aria-controls="tab-customizer" aria-selected="false" tabindex="-1" aria-label="1. College Details" onclick="switchTab('customizer')" class="px-3 py-1.5 rounded-lg transition-all text-slate-400 hover:text-white"><span aria-hidden="true">🏫</span> 1. College Details</button>
+        <button role="tab" id="nav-twin" aria-controls="tab-twin" aria-selected="true" tabindex="0" aria-label="2. Digital Twin" onclick="switchTab('twin')" class="px-3 py-1.5 rounded-lg transition-all bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-bold"><span aria-hidden="true">🗺️</span> 2. Digital Twin</button>
+        <button role="tab" id="nav-simulator" aria-controls="tab-simulator" aria-selected="false" tabindex="-1" aria-label="3. What-If Simulator and Bill" onclick="switchTab('simulator')" class="px-3 py-1.5 rounded-lg transition-all text-slate-400 hover:text-white"><span aria-hidden="true">⚙️</span> 3. What-If Simulator &amp; Bill</button>
+        <button role="tab" id="nav-connect" aria-controls="tab-connect" aria-selected="false" tabindex="-1" aria-label="4. Live Sensor Test" onclick="switchTab('connect')" class="px-3 py-1.5 rounded-lg transition-all text-cyan-400 hover:text-white flex items-center space-x-1">
+          <span><span aria-hidden="true">📡</span> 4. Live Sensor Test</span>
+        </button>
+      </div></nav>
+
+      <!-- Right Controls: Telemetry Mode & Executive Pitch -->
+      <div class="flex items-center space-x-2.5">
+        
+        <!-- Live Telemetry Mode Badge -->
+        <div id="telemetryModeBadge" role="status" class="hidden lg:flex items-center space-x-1.5 text-xs font-mono px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-300">
+          <span id="telemetryDot" aria-hidden="true" class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+          <span id="telemetryLabel">Demo Telemetry (Simulated)</span>
+        </div>
+
+        <!-- Mobile menu button -->
+        <button id="menuBtn" type="button" onclick="toggleMobileMenu()" aria-expanded="false" aria-controls="mobileMenu" aria-label="Open menu" class="md:hidden w-11 h-11 rounded-lg border border-slate-700 bg-slate-900 text-slate-200 flex items-center justify-center">
+          <svg id="menuIconOpen" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+          <svg id="menuIconClose" class="hidden" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+
+        <!-- Executive Report Generator -->
+        <button onclick="openReportModal()" aria-label="Executive Pitch" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition-all shadow-md shadow-emerald-500/20 flex items-center space-x-1.5">
+          <span>📄</span>
+          <span class="hidden sm:inline">Executive Pitch</span>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Mobile menu (below 768px) -->
+    <nav id="mobileMenu" aria-label="Sections (mobile)" class="hidden md:hidden border-t border-slate-800 bg-slate-950 px-4 py-2 space-y-1">
+      <button type="button" id="mnu-customizer" onclick="switchTab('customizer'); closeMobileMenu()" class="block w-full text-left px-3 rounded-lg text-sm text-slate-300">1. College Details</button>
+      <button type="button" id="mnu-twin" onclick="switchTab('twin'); closeMobileMenu()" class="block w-full text-left px-3 rounded-lg text-sm text-slate-300">2. Digital Twin</button>
+      <button type="button" id="mnu-simulator" onclick="switchTab('simulator'); closeMobileMenu()" class="block w-full text-left px-3 rounded-lg text-sm text-slate-300">3. What-If Simulator and Bill</button>
+      <button type="button" id="mnu-connect" onclick="switchTab('connect'); closeMobileMenu()" class="block w-full text-left px-3 rounded-lg text-sm text-cyan-300">4. Live Sensor Test</button>
+      <button type="button" onclick="closeMobileMenu(); openReportModal()" class="block w-full text-left px-3 rounded-lg text-sm text-emerald-300">Executive Pitch</button>
+    </nav>
+  </header>
+
+  <!-- MAIN DASHBOARD WRAPPER -->
+  <main id="main" tabindex="-1" class="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 space-y-5 flex-1 outline-none">
+
+    <!-- SHARED HEADER: walkthrough strip + campus strip + KPI ribbon (slides aside on every page change) -->
+    <div id="sharedHeader" class="space-y-5">
+
+    <!-- 4-STEP DEMO WALKTHROUGH STRIP (one step per tab) -->
+    <div class="demo-flow-strip bg-slate-900/90 border border-slate-800 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 text-xs shadow-md">
+      <div class="flex items-center space-x-2">
+        <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-mono font-bold text-[10px] border border-emerald-500/30">DEMO FLOW</span>
+        <span class="text-white font-medium text-xs">Recommended Judge Walkthrough:</span>
+      </div>
+      <div class="flex flex-wrap items-center gap-1.5 font-mono text-[11px]">
+        <button id="flow-customizer" onclick="switchTab('customizer')" class="flow-btn px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all">
+          1. Enter Campus Details ➔
+        </button>
+        <button id="flow-twin" onclick="switchTab('twin')" class="flow-btn px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all">
+          2. View Digital Campus ➔
+        </button>
+        <button id="flow-simulator" onclick="switchTab('simulator')" class="flow-btn px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all">
+          3. Simulate &amp; See Bill ➔
+        </button>
+        <button id="flow-connect" onclick="switchTab('connect')" class="flow-btn px-2.5 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 font-bold transition-all">
+          4. Test Live Sensor Ingest 📡
+        </button>
+        <button onclick="startAutoDemo()" id="btnAutoDemo" class="px-3 py-1 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold border border-emerald-400 shadow-sm flex items-center space-x-1.5 transition-all text-xs">
+          <span aria-hidden="true">▶️</span>
+          <span>Auto-Play Demo (~40s)</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Active College Context Strip -->
+    <div class="flex flex-wrap items-center justify-between gap-2 text-xs bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+      <div class="flex items-center space-x-2">
+        <span class="text-slate-400">Current Campus:</span>
+        <strong id="activeCollegeTitle" class="text-white font-bold bg-slate-800 px-2.5 py-0.5 rounded border border-slate-700 font-mono">
+          Apex Institute of Technology
+        </strong>
+        <span id="activeCollegeMeta" class="text-slate-400 hidden sm:inline">• 2,52,000 sq.ft • 6 Monitored Buildings • Tariff: ₹9.50/kWh</span>
+      </div>
+      <div class="flex items-center space-x-3">
+        <span class="text-xs font-mono text-slate-400 hidden md:inline">
+          Live Campus Draw: <strong id="topKw" class="text-amber-400 font-bold">171.2 kW</strong> | Water: <strong id="topLpm" class="text-cyan-400 font-bold">41.1 LPM</strong>
+        </span>
+        <button onclick="switchTab('customizer')" class="text-emerald-400 hover:underline font-semibold flex items-center space-x-1">
+          <span>Edit Campus Parameters</span>
+          <span>✏️</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- EXECUTIVE IMPACT METRICS RIBBON (4 Clear Numbers) -->
+    <div id="kpiRibbon" class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      
+      <!-- 1. Annual Net Savings -->
+      <div class="glass-card p-4 rounded-2xl border-emerald-500/30 glow-emerald relative overflow-hidden">
+        <div class="flex justify-between items-start">
+          <span class="text-[10px] text-emerald-400 uppercase font-bold tracking-wider">Annual Net Savings</span>
+          <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">Demo Estimate</span>
+        </div>
+        <div id="kpiSavings" class="text-xl sm:text-2xl lg:text-3xl font-mono font-extrabold text-emerald-400 mt-2">– <span class="text-xs text-slate-400 font-normal">/ yr</span></div>
+        <div class="text-[11px] text-slate-400 mt-1">Direct utility budget reduction</div>
+      </div>
+
+      <!-- 2. Required CapEx -->
+      <div class="glass-card p-4 rounded-2xl relative overflow-hidden">
+        <div class="flex justify-between items-start">
+          <span class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Required Setup Cost</span>
+          <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">Demo Estimate</span>
+        </div>
+        <div id="kpiCapex" class="text-xl sm:text-2xl lg:text-3xl font-mono font-extrabold text-white mt-2">–</div>
+        <div class="text-[11px] text-slate-400 mt-1">One-time sensor &amp; retrofit CapEx</div>
+      </div>
+
+      <!-- 3. Payback Horizon -->
+      <div class="glass-card p-4 rounded-2xl border-cyan-500/30 glow-cyan relative overflow-hidden">
+        <div class="flex justify-between items-start">
+          <span class="text-[10px] text-cyan-400 uppercase font-bold tracking-wider">Payback Period</span>
+          <span id="kpiRatingBadge" class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20">⏳ Long-term Capital</span>
+        </div>
+        <div id="kpiPayback" class="text-xl sm:text-2xl lg:text-3xl font-mono font-extrabold text-cyan-400 mt-2">– <span class="text-sm font-normal text-slate-400">Years</span></div>
+        <div class="text-[11px] text-slate-400 mt-1">Setup Cost ÷ Annual Net Savings</div>
+      </div>
+
+      <!-- 4. Decarbonization & Trees -->
+      <div class="glass-card p-4 rounded-2xl relative overflow-hidden">
+        <div class="flex justify-between items-start">
+          <span class="text-[10px] text-teal-400 uppercase font-bold tracking-wider">Carbon Reduction</span>
+          <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-teal-500/10 text-teal-300 border border-teal-500/20">Demo Estimate</span>
+        </div>
+        <div id="kpiCarbon" class="text-xl sm:text-2xl lg:text-3xl font-mono font-extrabold text-teal-400 mt-2">– <span class="text-sm font-normal text-slate-400">tCO₂e</span></div>
+        <div id="kpiTrees" class="text-[11px] text-slate-400 mt-1">– Trees Equivalent / yr</div>
+      </div>
+
+    </div>
+
+    </div><!-- /sharedHeader -->
+
+    <!-- ==================== TAB 1: COLLEGE PROFILE SETUP (STEP 1) ==================== -->
+    <section id="tab-customizer" role="tabpanel" aria-labelledby="nav-customizer" class="space-y-5 hidden">
+      <div class="glass-card p-6 rounded-2xl space-y-5">
+        <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800">
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/30">STEP 1 OF 4</span>
+              <h2 class="text-lg font-bold text-white">🏫 Enter Campus Details</h2>
+            </div>
+            <p class="text-xs text-slate-400 mt-1">
+              Input your college's real-world dimensions and utility tariffs. The Digital Twin simulator dynamically recalculates the baseline bills and potential savings in Indian Rupees (₹).
+            </p>
+          </div>
+
+          <!-- Quick Preset Selectors for Judges -->
+          <div class="flex items-center space-x-2">
+            <span class="text-[10px] font-mono text-slate-400 uppercase hidden sm:inline">Load Sample:</span>
+            <button onclick="loadSampleCollege('apex'); uiOk('Sample college loaded. Press Save to apply it.')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-mono text-emerald-400 border border-slate-700" title="Tier-1 Tech Campus">
+              Apex Tech
+            </button>
+            <button onclick="loadSampleCollege('state'); uiOk('Sample college loaded. Press Save to apply it.')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-mono text-cyan-400 border border-slate-700" title="Govt Engineering College">
+              State Govt
+            </button>
+            <button onclick="loadSampleCollege('metro'); uiOk('Sample college loaded. Press Save to apply it.')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-mono text-amber-400 border border-slate-700" title="Metro University">
+              Metro Univ
+            </button>
+          </div>
+        </div>
+
+        <!-- Input Fields -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
+          
+          <div>
+            <label for="cfgName" class="block text-slate-300 font-semibold mb-1">College / Institution Name *</label>
+            <input type="text" id="cfgName" required value="Apex Institute of Technology" class="w-full p-2.5 rounded-lg bg-slate-950 border border-slate-800 text-white font-semibold focus:border-emerald-500 outline-none">
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label for="cfgArea" class="block text-slate-300 font-semibold">Total Campus Area *</label>
+              <div class="flex bg-slate-900 border border-slate-800 rounded p-0.5 text-[10px] font-mono">
+                <button type="button" onclick="setAreaUnit('sqft')" id="unit-sqft" aria-pressed="true" class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-400 font-bold">sq.ft</button>
+                <button type="button" onclick="setAreaUnit('acres')" id="unit-acres" aria-pressed="false" class="px-1.5 py-0.5 rounded text-slate-400 hover:text-white">Acres</button>
+                <button type="button" onclick="setAreaUnit('sqm')" id="unit-sqm" aria-pressed="false" class="px-1.5 py-0.5 rounded text-slate-400 hover:text-white">m²</button>
+              </div>
+            </div>
+            <div class="flex">
+              <input type="number" id="cfgArea" required value="252000" class="w-full p-2.5 rounded-l-lg bg-slate-950 border border-slate-800 text-white font-mono focus:border-emerald-500 outline-none" oninput="onAreaInputChange()">
+              <span aria-hidden="true" id="cfgAreaUnitLabel" class="px-3 py-2.5 bg-slate-900 border border-l-0 border-slate-800 text-slate-400 text-xs rounded-r-lg font-mono">sq.ft</span>
+            </div>
+            <p id="areaEquivText" class="text-[10px] text-slate-500 mt-1 font-mono">≈ 5.79 Acres • 23,411 m² (2,52,000 sq.ft)</p>
+          </div>
+
+          <div>
+            <label for="cfgBuildings" class="block text-slate-300 font-semibold mb-1">Number of Monitored Buildings *</label>
+            <input type="number" id="cfgBuildings" value="6" min="1" max="50" step="1" required class="w-full p-2.5 rounded-lg bg-slate-950 border border-slate-800 text-white font-mono focus:border-emerald-500 outline-none" oninput="updateLiveCollegeBaseline()">
+          </div>
+
+          <div>
+            <label for="cfgRateElec" class="block text-slate-300 font-semibold mb-1">Electricity Tariff Rate (₹ per kWh) *</label>
+            <div class="flex">
+              <span class="px-3 py-2.5 bg-slate-900 border border-r-0 border-slate-800 text-amber-400 text-xs rounded-l-lg font-mono font-bold">₹</span>
+              <input type="number" id="cfgRateElec" required value="9.50" step="0.25" class="w-full p-2.5 rounded-r-lg bg-slate-950 border border-slate-800 text-amber-400 font-mono font-bold focus:border-amber-500 outline-none" oninput="updateLiveCollegeBaseline()">
+            </div>
+            <p class="text-[10px] text-slate-500 mt-1">Typical Indian commercial tariff: ₹8.50 - ₹11.00/kWh</p>
+          </div>
+
+          <div>
+            <label for="cfgMonthlyKWh" class="block text-slate-300 font-semibold mb-1">Monthly Energy Consumption (kWh / month) *</label>
+            <div class="flex">
+              <input type="number" id="cfgMonthlyKWh" required value="125000" step="1000" class="w-full p-2.5 rounded-l-lg bg-slate-950 border border-slate-800 text-amber-400 font-mono font-bold focus:border-amber-500 outline-none" oninput="updateLiveCollegeBaseline()">
+              <span class="px-3 py-2.5 bg-slate-900 border border-l-0 border-slate-800 text-slate-400 text-xs rounded-r-lg font-mono">kWh</span>
+            </div>
+            <p class="text-[10px] text-slate-500 mt-1">Derived from campus utility meters</p>
+          </div>
+
+          <div>
+            <label for="cfgRateWater" class="block text-slate-300 font-semibold mb-1">Water Supply Rate (₹ per 1,000 Litres / kL) *</label>
+            <div class="flex">
+              <span class="px-3 py-2.5 bg-slate-900 border border-r-0 border-slate-800 text-cyan-400 text-xs rounded-l-lg font-mono font-bold">₹</span>
+              <input type="number" id="cfgRateWater" required value="45.00" step="1.0" class="w-full p-2.5 rounded-r-lg bg-slate-950 border border-slate-800 text-cyan-400 font-mono font-bold focus:border-cyan-500 outline-none" oninput="updateLiveCollegeBaseline()">
+            </div>
+            <p class="text-[10px] text-slate-500 mt-1">Municipal or tanker bulk rate: ₹35 - ₹60/kL</p>
+          </div>
+
+          <div>
+            <label for="cfgMonthlyWaterKL" class="block text-slate-300 font-semibold mb-1">Monthly Water Consumption (kL / month) *</label>
+            <div class="flex">
+              <input type="number" id="cfgMonthlyWaterKL" required value="1800" step="50" class="w-full p-2.5 rounded-l-lg bg-slate-950 border border-slate-800 text-cyan-400 font-mono font-bold focus:border-cyan-500 outline-none" oninput="updateLiveCollegeBaseline()">
+              <span class="px-3 py-2.5 bg-slate-900 border border-l-0 border-slate-800 text-slate-400 text-xs rounded-r-lg font-mono">kL</span>
+            </div>
+            <p class="text-[10px] text-slate-500 mt-1">Hostels, labs, canteen &amp; grounds</p>
+          </div>
+
+          <div>
+            <label for="cfgStudents" class="block text-slate-300 font-semibold mb-1">Total Student &amp; Faculty Population</label>
+            <input type="number" id="cfgStudents" value="4800" class="w-full p-2.5 rounded-lg bg-slate-950 border border-slate-800 text-white font-mono focus:border-emerald-500 outline-none">
+          </div>
+
+          <!-- Dynamic Baseline Preview Card -->
+          <div class="p-3.5 rounded-xl bg-slate-950/80 border border-emerald-500/30 flex flex-col justify-between">
+            <div>
+              <div class="text-[10px] font-mono text-emerald-400 font-bold uppercase">Dynamic Baseline Calculation:</div>
+              <div class="mt-1 text-slate-300 text-[11px] space-y-0.5">
+                <div>Power Bill: <span id="previewElecBill" class="font-mono text-amber-400 font-bold">₹11,87,500</span> / mo</div>
+                <div>Water Bill: <span id="previewWaterBill" class="font-mono text-cyan-400 font-bold">₹81,000</span> / mo</div>
+              </div>
+            </div>
+            <div class="mt-2 pt-2 border-t border-slate-800 text-xs">
+              <span class="text-slate-400 text-[10px] uppercase block">Total Baseline Annual Bill:</span>
+              <span id="previewAnnualBill" class="text-emerald-400 font-mono font-extrabold text-sm">₹1,52,22,000 / yr</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Buildings & Facilities editor -->
+        <div id="facilitiesPanel" class="rounded-xl border border-slate-800 bg-slate-950/60 p-4 space-y-3">
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <div class="max-w-2xl">
+              <h3 class="text-sm font-bold text-white">🏢 Buildings &amp; Facilities</h3>
+              <p id="facModeText" class="text-xs text-slate-400 mt-1"></p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button type="button" id="btnFacCustomize" onclick="startCustomFacilities()" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-emerald-300 border border-slate-700">✏️ Enter my own buildings</button>
+              <button type="button" id="btnFacAdd" onclick="addFacilityRow()" class="hidden px-3 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-xs font-bold text-slate-950">＋ Add building / facility</button>
+              <button type="button" id="btnFacAuto" onclick="resetToAutoFacilities(); uiOk('Facilities reset to the automatic layout.')" class="hidden px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 border border-slate-700">↺ Back to auto-generated</button>
+            </div>
+          </div>
+          <div id="facEditor" class="hidden space-y-3">
+            <div id="facRows" class="space-y-2"></div>
+            <div id="facSummary" class="text-xs text-slate-300 space-y-1" aria-live="polite"></div>
+            <button type="button" id="btnFacScale" onclick="scaleFacilityLoads()" class="hidden px-3 py-2 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-xs font-semibold text-amber-200 border border-amber-500/40">⚖️ Scale loads to match the monthly bills above</button>
+          </div>
+        </div>
+
+        <div id="cfgError" role="alert" class="hidden p-3 rounded-lg bg-rose-950/50 border border-rose-500/40 text-rose-200 text-xs"></div>
+        <!-- Action Button & Step Forward -->
+        <div class="pt-4 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3">
+          <span class="text-[11px] text-slate-500 font-mono">
+            Deterministic formulas link these parameters directly into the Simulator &amp; Twin.
+          </span>
+          <div class="flex items-center space-x-2">
+            <button onclick="saveCollegeConfig()" class="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-lg shadow-emerald-500/20 flex items-center space-x-2">
+              <span>💾 Save &amp; Update Digital Twin</span>
+              <span>➔</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 2: CAMPUS DIGITAL TWIN MAP (STEP 2) ==================== -->
+    <section id="tab-twin" role="tabpanel" aria-labelledby="nav-twin" class="space-y-6">
+      <div class="glass-card p-5 rounded-2xl">
+        
+        <!-- Map Controls -->
+        <div class="flex flex-wrap items-center justify-between gap-4 mb-5 pb-4 border-b border-slate-800">
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/30">STEP 2 OF 4</span>
+              <h2 class="text-base font-bold text-white">Interactive Digital Twin Campus Model</h2>
+              <span id="facilityCountBadge" class="px-2 py-0.5 text-[10px] font-mono rounded bg-slate-800 text-slate-300 border border-slate-700">6 Monitored Facilities</span>
+            </div>
+            <p class="text-xs text-slate-400 mt-0.5">Click any facility on the campus map or the cards below to inspect live power draw, water flow rate, fixture inventory, and detected inefficiencies.</p>
+          </div>
+
+          <!-- Layer Heatmap Toggles -->
+          <div role="group" aria-label="Map layer" class="flex items-center space-x-1.5 bg-slate-900 p-1 rounded-xl border border-slate-800 text-xs">
+            <button onclick="setLayer('energy')" id="btn-layer-energy" aria-pressed="true" class="px-3 py-1.5 rounded-lg font-bold bg-amber-500/20 text-amber-400 border border-amber-500/40">⚡ Energy</button>
+            <button onclick="setLayer('water')" id="btn-layer-water" aria-pressed="false" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white">💧 Water</button>
+            <button onclick="setLayer('waste')" id="btn-layer-waste" aria-pressed="false" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white">♻️ Waste</button>
+            <button onclick="setLayer('thermal')" id="btn-layer-thermal" aria-pressed="false" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white">🌡️ Thermal</button>
+          </div>
+        </div>
+
+        <!-- 2D TOPOLOGICAL CAMPUS DIGITAL TWIN SCHEMATIC -->
+        <div class="p-4 rounded-2xl bg-slate-950/90 border border-slate-800/80 mb-5 relative overflow-hidden">
+          <div class="flex items-center justify-between mb-3 text-xs">
+            <span class="text-slate-400 font-mono text-[11px] flex items-center space-x-2">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span>TOPOLOGICAL CAMPUS QUAD SCHEMATIC (Click Building to Inspect)</span>
+            </span>
+            <span class="text-slate-500 text-[10px] font-mono hidden sm:inline">North: Academic Wing • South: Student Commons</span>
+          </div>
+
+          <svg id="campusMap" viewBox="0 0 900 280" role="group" aria-label="Campus map. Each building is a button that opens its details." class="w-full h-auto select-none rounded-xl bg-slate-950 border border-slate-800/60 shadow-inner"></svg>
+        </div>
+
+        <!-- Campus Facilities Detailed Cards Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="buildingsGrid" role="group" aria-label="Campus facilities"></div>
+        <!-- Map Footer Telemetry Heartbeat -->
+        <div class="mt-5 pt-3 border-t border-slate-800 flex flex-wrap items-center justify-between text-xs text-slate-500 gap-2 font-mono">
+          <span class="flex items-center space-x-2 text-emerald-400">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span id="footerTelemetryMsg" role="status">Checking gateway...</span>
+          </span>
+          <div class="flex items-center space-x-3">
+            <span>Gross Floor Area: <strong id="grossAreaText" class="text-slate-300">2,52,000 sq.ft</strong></span>
+            <button onclick="switchTab('simulator')" class="text-emerald-400 hover:underline font-bold">
+              Proceed to Simulator ➔
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==================== TAB 3: "WHAT-IF" SIMULATION STUDIO (STEP 3) ==================== -->
+    <section id="tab-simulator" role="tabpanel" aria-labelledby="nav-simulator" class="space-y-6 hidden">
+      <div class="glass-card p-4 rounded-2xl border-emerald-500/30">
+        <div class="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-2">AI Planner: describe a what-if in plain English</div>
+        <div class="flex flex-col sm:flex-row gap-2">
+          <input id="aiQuestion" type="text" aria-label="Describe a what-if in plain English" maxlength="600" placeholder="Describe a situation or a what-if, e.g. Our power bill is too high / solar on the hostel roofs and fix leaking taps" class="flex-1 p-2.5 rounded-lg bg-slate-950 border border-slate-800 text-sm text-white" onkeydown="if(event.key==='Enter')askAI()">
+          <button id="aiBtn" onclick="askAI()" class="px-4 py-2 rounded-lg text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-950">Suggest settings</button>
+        </div>
+        <div id="aiExamples" role="group" aria-label="Example situations" class="flex flex-wrap gap-1.5 mt-2"></div>
+        <div id="aiResult" role="status" aria-live="polite" class="text-xs text-slate-300 mt-2"></div>
+      </div>
+      <div class="glass-card p-6 rounded-2xl space-y-6">
+        
+        <!-- Header & Reset -->
+        <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-800">
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/30">STEP 3 OF 4</span>
+              <h2 class="text-base font-bold text-white flex items-center space-x-2">
+                <span>⚙️ What-If Simulation &amp; Utility Bill Reduction</span>
+              </h2>
+            </div>
+            <p class="text-xs text-slate-400 mt-0.5">Adjust sliders to simulate energy interventions. The engine immediately calculates the revised Indian Rupee bill, net savings, and payback period.</p>
+          </div>
+
+          <div class="flex items-center space-x-2">
+            <button onclick="resetSliders(); uiOk('Simulator sliders reset.')" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white bg-slate-900 border border-slate-800">
+              Reset to Baseline
+            </button>
+            <button onclick="openReportModal()" class="px-4 py-1.5 rounded-lg text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-sm">
+              📄 Export Executive Pitch
+            </button>
+          </div>
+        </div>
+
+        <!-- Before vs After Financial Comparison Bar -->
+        <div id="simComparisonBar" class="p-4 rounded-xl bg-slate-950/90 border border-slate-800 grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+          <div class="p-2 border-b sm:border-b-0 sm:border-r border-slate-800/80">
+            <span class="text-[10px] text-slate-400 uppercase font-mono block">1. Baseline Annual Utility Bill</span>
+            <span id="simBaselineBill" class="text-lg sm:text-xl font-mono font-bold text-rose-400 mt-1 block">–</span>
+            <span class="text-[10px] text-slate-500">Current campus run-rate</span>
+          </div>
+          <div class="p-2 border-b sm:border-b-0 sm:border-r border-slate-800/80">
+            <span class="text-[10px] text-emerald-400 uppercase font-mono block">2. Projected Green Twin Bill</span>
+            <span id="simGreenBill" class="text-lg sm:text-xl font-mono font-bold text-emerald-400 mt-1 block">–</span>
+            <span class="text-[10px] text-slate-500">After simulated interventions</span>
+          </div>
+          <div class="p-2">
+            <span class="text-[10px] text-cyan-400 uppercase font-mono block">3. Net Annual Cost Savings</span>
+            <span id="simNetSavings" class="text-lg sm:text-xl font-mono font-extrabold text-cyan-300 mt-1 block">– / yr</span>
+            <span id="simPaybackNote" class="text-[10px] text-slate-400">Demo Estimate • 1.59 Yrs Payback</span>
+          </div>
+        </div>
+
+        <div id="simBaselineSource" role="status" class="text-[11px] font-mono text-slate-300 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2"></div>
+        <!-- 4 Tested Pre-Configured Scenarios -->
+        <div>
+          <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">⚡ 1-Click Tested Intervention Packages:</div>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+            <button onclick="applyPreset(70, 1.0, 0, 80, 20, 30, 40); uiOk('Preset applied. Check the bill and payback above.')" data-preset="70,1.0,0,80,20,30,40" class="p-3 rounded-xl bg-slate-900 border border-slate-800 hover:border-amber-500 text-left transition-all group">
+              <div class="font-bold text-amber-400 group-hover:text-amber-300">⚡ Quick Automation</div>
+              <div class="text-[10px] text-slate-400 mt-0.5">70% Motion Sensors + 80% Aerators</div>
+              <div class="preset-payback text-[10px] text-emerald-400 font-mono mt-1 font-semibold">Payback: –</div>
+            </button>
+
+            <button onclick="applyPreset(30, 1.0, 60, 25, 0, 0, 0); uiOk('Preset applied. Check the bill and payback above.')" data-preset="30,1.0,60,25,0,0,0" class="p-3 rounded-xl bg-slate-900 border border-slate-800 hover:border-amber-500 text-left transition-all group">
+              <div class="font-bold text-amber-400 group-hover:text-amber-300">☀️ Rooftop Solar</div>
+              <div class="text-[10px] text-slate-400 mt-0.5">60% Solar PV Installation</div>
+              <div class="preset-payback text-[10px] text-emerald-400 font-mono mt-1 font-semibold">Payback: –</div>
+            </button>
+
+            <button onclick="applyPreset(20, 0.0, 0, 90, 60, 10, 50); uiOk('Preset applied. Check the bill and payback above.')" data-preset="20,0.0,0,90,60,10,50" class="p-3 rounded-xl bg-slate-900 border border-slate-800 hover:border-cyan-500 text-left transition-all group">
+              <div class="font-bold text-cyan-400 group-hover:text-cyan-300">💧 Water Grid</div>
+              <div class="text-[10px] text-slate-400 mt-0.5">90% Aerators + Rain Catchment</div>
+              <div class="preset-payback text-[10px] text-emerald-400 font-mono mt-1 font-semibold">Payback: –</div>
+            </button>
+
+            <button onclick="applyPreset(85, 1.5, 75, 90, 70, 85, 80); uiOk('Preset applied. Check the bill and payback above.')" data-preset="85,1.5,75,90,70,85,80" class="p-3 rounded-xl bg-slate-900 border border-emerald-500/40 text-left transition-all group">
+              <div class="font-bold text-emerald-400 group-hover:text-emerald-300">🌱 Net-Zero Blueprint</div>
+              <div class="text-[10px] text-slate-400 mt-0.5">All Solutions Combined</div>
+              <div class="preset-payback text-[10px] text-emerald-400 font-mono mt-1 font-semibold">Payback: –</div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Fine-Tuned Range Sliders -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
+          
+          <!-- Column 1: Energy & Electrical Grid -->
+          <div class="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-4">
+            <div class="text-xs font-bold text-amber-400 uppercase tracking-wider border-b border-slate-800 pb-2 flex items-center justify-between">
+              <span>⚡ Electrical &amp; Solar Grid</span>
+              <span class="text-[10px] font-mono text-slate-500">CapEx ~₹3,200/sensor</span>
+            </div>
+
+            <!-- Motion Sensors -->
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <label for="slSensors" class="text-slate-300 font-medium">Classroom Motion Sensors</label>
+                <span id="valSensors" aria-hidden="true" class="font-mono font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">65%</span>
+              </div>
+              <input type="range" id="slSensors" aria-describedby="hintSensors" min="0" max="100" value="65" step="5" class="w-full accent-amber-500 cursor-pointer h-2 bg-slate-800 rounded-lg" oninput="calculateSimulation()">
+              <p id="hintSensors" class="text-[10px] text-slate-500 mt-1">Cuts empty-room lights &amp; fan waste after 5 min unoccupied.</p>
+            </div>
+
+            <!-- Rooftop Solar PV -->
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <label for="slSolar" class="text-slate-300 font-medium">Rooftop Solar PV Installation</label>
+                <span id="valSolar" aria-hidden="true" class="font-mono font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">45%</span>
+              </div>
+              <input type="range" id="slSolar" aria-describedby="hintSolar" min="0" max="100" value="45" step="5" class="w-full accent-amber-500 cursor-pointer h-2 bg-slate-800 rounded-lg" oninput="calculateSimulation()">
+              <p id="hintSolar" class="text-[10px] text-slate-500 mt-1">Harnesses campus roof space (~₹68,000/kWp installed).</p>
+            </div>
+
+            <!-- HVAC Optimization -->
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <label for="slHvac" class="text-slate-300 font-medium">AC Setpoint Offset (+°C)</label>
+                <span id="valHvac" aria-hidden="true" class="font-mono font-bold text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/30">+1.0°C</span>
+              </div>
+              <input type="range" id="slHvac" aria-describedby="hintHvac" min="0" max="3" value="1" step="0.5" class="w-full accent-cyan-500 cursor-pointer h-2 bg-slate-800 rounded-lg" oninput="calculateSimulation()">
+              <p id="hintHvac" class="text-[10px] text-slate-500 mt-1">Each +1°C setpoint rise reduces chiller power draw by ~6%.</p>
+            </div>
+          </div>
+
+          <!-- Column 2: Water & Hydro Grid -->
+          <div class="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-4">
+            <div class="text-xs font-bold text-cyan-400 uppercase tracking-wider border-b border-slate-800 pb-2 flex items-center justify-between">
+              <span>💧 Water Conservation Grid</span>
+              <span class="text-[10px] font-mono text-slate-500">CapEx ~₹450/aerator</span>
+            </div>
+
+            <!-- Tap Aerators -->
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <label for="slAerators" class="text-slate-300 font-medium">Tap Aerators (Flow Cut 9L→3L)</label>
+                <span id="valAerators" aria-hidden="true" class="font-mono font-bold text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/30">80%</span>
+              </div>
+              <input type="range" id="slAerators" aria-describedby="hintAerators" min="0" max="100" value="80" step="5" class="w-full accent-cyan-500 cursor-pointer h-2 bg-slate-800 rounded-lg" oninput="calculateSimulation()">
+              <p id="hintAerators" class="text-[10px] text-slate-500 mt-1">Reduces washbasin tap flow by 55% with air-infusion technology.</p>
+            </div>
+
+            <!-- Rainwater Harvesting -->
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <label for="slRain" class="text-slate-300 font-medium">Rainwater Catchment &amp; Recharge</label>
+                <span id="valRain" aria-hidden="true" class="font-mono font-bold text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/30">40%</span>
+              </div>
+              <input type="range" id="slRain" aria-describedby="hintRain" min="0" max="100" value="40" step="5" class="w-full accent-blue-500 cursor-pointer h-2 bg-slate-800 rounded-lg" oninput="calculateSimulation()">
+              <p id="hintRain" class="text-[10px] text-slate-500 mt-1">Captures monsoon roof runoff to replenish campus borewells.</p>
+            </div>
+          </div>
+
+          <!-- Column 3: Waste & Circular Commons -->
+          <div class="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-4">
+            <div class="text-xs font-bold text-emerald-400 uppercase tracking-wider border-b border-slate-800 pb-2 flex items-center justify-between">
+              <span>♻️ Circularity &amp; Waste</span>
+              <span class="text-[10px] font-mono text-slate-500">Biodigester</span>
+            </div>
+
+            <!-- Food Composting -->
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <label for="slWaste" class="text-slate-300 font-medium">Canteen Food Biodigestion</label>
+                <span id="valWaste" aria-hidden="true" class="font-mono font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30">60%</span>
+              </div>
+              <input type="range" id="slWaste" aria-describedby="hintWaste" min="0" max="100" value="60" step="5" class="w-full accent-emerald-500 cursor-pointer h-2 bg-slate-800 rounded-lg" oninput="calculateSimulation()">
+              <p id="hintWaste" class="text-[10px] text-slate-500 mt-1">Diverts food waste to clean cooking biogas &amp; organic garden compost.</p>
+            </div>
+
+            <!-- Plastic Bottle Elimination -->
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <label for="slPlastic" class="text-slate-300 font-medium">Plastic Bottle Ban &amp; Refill Kiosks</label>
+                <span id="valPlastic" aria-hidden="true" class="font-mono font-bold text-teal-400 bg-teal-500/10 px-2 py-0.5 rounded border border-teal-500/30">70%</span>
+              </div>
+              <input type="range" id="slPlastic" aria-describedby="hintPlastic" min="0" max="100" value="70" step="5" class="w-full accent-teal-500 cursor-pointer h-2 bg-slate-800 rounded-lg" oninput="calculateSimulation()">
+              <p id="hintPlastic" class="text-[10px] text-slate-500 mt-1">Replaces single-use bottles with filtered campus water stations.</p>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Comparative Graphs Section (Dynamically Calculated) -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-4 border-t border-slate-800">
+          <div class="p-4 rounded-xl bg-slate-950 border border-slate-800">
+            <h3 class="text-xs font-bold text-white mb-1">📉 12-Month Utility Expense Trajectory (in ₹ Lakhs)</h3>
+            <p class="text-[11px] text-slate-400 mb-3">Dynamic Baseline (Red) vs. Simulated Green State (Green)</p>
+            <div class="h-56 relative">
+              <canvas id="chartMonthly" role="img" aria-label="Monthly utility spend chart"></canvas>
+            </div>
+          </div>
+
+          <div class="p-4 rounded-xl bg-slate-950 border border-slate-800">
+            <h3 class="text-xs font-bold text-white mb-1">📊 Resource Demand Reduction Footprint</h3>
+            <p class="text-[11px] text-slate-400 mb-3">Dynamic Conserved Volumes across Energy, Water &amp; Waste</p>
+            <div class="h-56 relative">
+              <canvas id="chartResources" role="img" aria-label="Resource demand chart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <p id="chartSummary" class="sr-only"></p>
+        <!-- Step 4 Navigation Prompt -->
+        <div class="p-3.5 rounded-xl bg-cyan-950/30 border border-cyan-500/30 flex items-center justify-between text-xs">
+          <span class="text-slate-300">
+            Ready to test how the digital twin receives real-world data from the campus?
+          </span>
+          <button onclick="switchTab('connect')" class="px-4 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold font-mono">
+            Step 4: Demonstrate Simulated Sensor Reading ➔
+          </button>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==================== TAB 4: SENSOR CONNECTION & DEMO TRANSMITTER (STEP 4) ==================== -->
+    <section id="tab-connect" role="tabpanel" aria-labelledby="nav-connect" class="space-y-6 hidden">
+      
+      <!-- Connect Banner -->
+      <div class="glass-card p-6 rounded-2xl border-cyan-500/40 space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="text-[10px] font-mono font-bold bg-cyan-500/20 text-cyan-400 px-2 py-0.5 rounded border border-cyan-500/30">STEP 4 OF 4</span>
+              <h2 class="text-lg font-bold text-white">📡 Demonstrate a Simulated Sensor Reading</h2>
+            </div>
+            <p class="text-xs text-slate-300 mt-1 max-w-2xl">
+              This interactive test transmitter simulates real IoT sensors (e.g., CT current clamps or PIR motion sensors) streaming packets via <code class="text-cyan-400 font-mono bg-slate-950 px-1 py-0.5 rounded">POST /api/campus/ingest</code> to update the Digital Twin in real-time.
+            </p>
+          </div>
+
+          <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono">
+            <div class="text-[10px] text-slate-400 uppercase">Live Webhook Endpoint:</div>
+            <div class="text-cyan-400 font-bold mt-0.5">POST /api/campus/ingest</div>
+          </div>
+        </div>
+
+        <!-- Continuous Autonomous Streamer Toggle -->
+        <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center space-x-2.5">
+            <div class="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 text-sm">
+              🔄
+            </div>
+            <div>
+              <div class="text-xs font-bold text-white">Autonomous Continuous IoT Streamer</div>
+              <div class="text-[10px] text-slate-400">Streams live sensor telemetry every 4s to POST /api/campus/ingest</div>
+            </div>
+          </div>
+          <button id="btnContinuousStream" aria-pressed="false" onclick="toggleContinuousStream(); uiOk(continuousStreamTimer ? 'Continuous streamer started.' : 'Continuous streamer stopped.')" class="px-4 py-2 rounded-xl text-xs font-bold font-mono bg-slate-900 text-slate-300 border border-slate-700 hover:border-emerald-500 transition-all flex items-center space-x-2">
+            <span class="w-2 h-2 rounded-full bg-slate-500"></span>
+            <span id="txtContinuousStream">Continuous Streamer: OFF</span>
+          </button>
+        </div>
+
+        <!-- 1-Click Quick Demo Buttons for Hackathon Presentation -->
+        <div class="p-4 rounded-xl bg-slate-950 border border-cyan-500/20 space-y-2">
+          <span class="text-[11px] font-bold text-slate-300 uppercase tracking-wider block">
+            🚀 1-Click Presentation Demos (Instant Twin Update):
+          </span>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+            <button onclick="triggerQuickDemo('spike')" class="p-3 rounded-lg bg-rose-950/40 border border-rose-500/40 hover:border-rose-400 text-left transition-all group">
+              <div class="font-bold text-rose-400">🔴 Demo Inefficiency: Empty Lecture Halls With AC On</div>
+              <div class="text-[10px] text-slate-400 mt-1">Transmits spike (<span id="demoSpikeKw">148.5</span> kW) to Block ENG-B1. See alarm &amp; power meter rise immediately.</div>
+            </button>
+            <button onclick="triggerQuickDemo('drop')" class="p-3 rounded-lg bg-emerald-950/40 border border-emerald-500/40 hover:border-emerald-400 text-left transition-all group">
+              <div class="font-bold text-emerald-400">🟢 Demo Motion Sensor Trigger: Idle Appliances Auto-Off</div>
+              <div class="text-[10px] text-slate-400 mt-1">Transmits drop (<span id="demoDropKw">58.2</span> kW) to Block ENG-B1. See power drop and alarm clear.</div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Manual Webhook Test Console -->
+        <div class="space-y-3 pt-2">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-bold text-white uppercase tracking-wider">
+              Manual Custom Sensor Packet Transmitter
+            </h3>
+            <span class="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30">Active Ingest Gateway</span>
+          </div>
+
+          <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
+            <div>
+              <label class="block text-slate-400 mb-1 font-semibold">Target Facility</label>
+              <select id="simBldg" aria-label="Target facility" class="w-full p-2 rounded-lg bg-slate-950 border border-slate-800 text-white font-mono"></select>
+            </div>
+
+            <div>
+              <label class="block text-slate-400 mb-1 font-semibold">Power Draw (kW)</label>
+              <input type="number" id="simKw" aria-label="Power draw in kilowatts" value="125.0" step="0.5" class="w-full p-2 rounded-lg bg-slate-950 border border-slate-800 text-amber-400 font-mono font-bold">
+            </div>
+
+            <div>
+              <label class="block text-slate-400 mb-1 font-semibold">Water Flow (LPM)</label>
+              <input type="number" id="simWater" aria-label="Water flow in litres per minute" value="28.5" step="0.5" class="w-full p-2 rounded-lg bg-slate-950 border border-slate-800 text-cyan-400 font-mono font-bold">
+            </div>
+
+            <div>
+              <label class="block text-slate-400 mb-1 font-semibold">Indoor Temp (°C)</label>
+              <input type="number" id="simTemp" aria-label="Indoor temperature in Celsius" value="25.5" step="0.5" class="w-full p-2 rounded-lg bg-slate-950 border border-slate-800 text-rose-400 font-mono font-bold">
+            </div>
+
+            <div>
+              <label class="block text-slate-400 mb-1 font-semibold">Empty Rooms With AC</label>
+              <input type="number" id="simEmpty" aria-label="Empty rooms with AC on" value="2" min="0" max="15" class="w-full p-2 rounded-lg bg-slate-950 border border-slate-800 text-white font-mono font-bold">
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center justify-between gap-2 pt-2">
+            <button onclick="sendLiveWebhook()" class="px-5 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs shadow-md shadow-cyan-500/20 flex items-center space-x-1.5">
+              <span>📡 Transmit Live Sensor Packet to Twin</span>
+            </button>
+            <div id="webhookStatus" role="status" aria-live="polite" class="text-xs font-mono text-slate-400">Ready to transmit packet</div>
+          </div>
+        </div>
+
+        <!-- Ingest Notification Box -->
+        <div id="ingestToast" role="status" aria-live="polite" class="hidden p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-mono flex items-center justify-between">
+          <span id="ingestToastMsg">✓ Ingested! Digital Twin updated.</span>
+          <button onclick="switchTab('twin')" class="text-xs text-white underline font-bold">
+            View on Digital Twin Map ➔
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Code Snippets for College Engineering Students -->
+      <div class="glass-card p-6 rounded-2xl space-y-3">
+        <h3 class="text-xs font-bold text-white uppercase tracking-wider">💻 Ready-to-Copy Sensor Streamer Scripts (Raspberry Pi / ESP32 / Python)</h3>
+        
+        <div class="flex space-x-2 border-b border-slate-800 pb-2 text-xs">
+          <button onclick="switchCodeSnippet('python')" id="btn-snip-python" aria-pressed="true" class="px-3 py-1 rounded-lg bg-slate-800 text-emerald-400 font-bold">Python / Raspberry Pi</button>
+          <button onclick="switchCodeSnippet('esp32')" id="btn-snip-esp32" aria-pressed="false" class="px-3 py-1 rounded-lg text-slate-400 hover:text-white">ESP32 / Arduino (C++)</button>
+          <button onclick="switchCodeSnippet('curl')" id="btn-snip-curl" aria-pressed="false" class="px-3 py-1 rounded-lg text-slate-400 hover:text-white">cURL / REST API</button>
+        </div>
+
+        <pre id="snip-python" class="p-4 rounded-xl bg-slate-950 font-mono text-[11px] text-slate-300 overflow-x-auto border border-slate-800/80 leading-relaxed"><span class="text-slate-500"># Send live campus telemetry from Raspberry Pi or BMS</span>
+import urllib.request, json, time
+
+API_URL = "http://localhost:5000/api/campus/ingest"
+
+payload = {
+    "buildingId": "b1",           # Engineering Complex
+    "powerDrawKW": 31.0,          # From Modbus RS485 / CT clamp
+    "waterFlowLPM": 6.5,          # From pulse flow meter
+    "indoorTempC": 25.5,          # From DHT22 sensor
+    "emptyRoomsWithPowerOn": 2    # From PIR motion sensors
+}
+
+req = urllib.request.Request(API_URL, data=json.dumps(payload).encode(), headers={"Content-Type": "application/json"})
+res = urllib.request.urlopen(req)
+print("Live Telemetry Synced:", res.read().decode())</pre>
+
+        <pre id="snip-esp32" class="p-4 rounded-xl bg-slate-950 font-mono text-[11px] text-slate-300 overflow-x-auto border border-slate-800/80 leading-relaxed hidden"><span class="text-slate-500">// ESP32 / Arduino Wi-Fi Telemetry Streamer</span>
+#include &lt;WiFi.h&gt;
+#include &lt;HTTPClient.h&gt;
+
+const char* serverUrl = "http://localhost:5000/api/campus/ingest";
+
+void pushSensorData(float kw, float lpm, int emptyRooms) {
+  HTTPClient http;
+  http.begin(serverUrl);
+  http.addHeader("Content-Type", "application/json");
+
+  String json = "{\"buildingId\":\"b1\",\"powerDrawKW\":" + String(kw) + 
+                ",\"waterFlowLPM\":" + String(lpm) + 
+                ",\"emptyRoomsWithPowerOn\":" + String(emptyRooms) + "}";
+
+  int code = http.POST(json);
+  Serial.println("Response: " + String(code));
+  http.end();
+}</pre>
+
+        <pre id="snip-curl" class="p-4 rounded-xl bg-slate-950 font-mono text-[11px] text-slate-300 overflow-x-auto border border-slate-800/80 leading-relaxed hidden">curl -X POST http://localhost:5000/api/campus/ingest \
+  -H "Content-Type: application/json" \
+  -d '{
+    "buildingId": "b1",
+    "powerDrawKW": 31.0,
+    "waterFlowLPM": 6.5,
+    "indoorTempC": 25.5,
+    "emptyRoomsWithPowerOn": 2
+  }'</pre>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ==================== FACILITY INSPECTOR MODAL ==================== -->
+  <div id="facilityModal" role="dialog" aria-modal="true" aria-labelledby="facTitle" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="w-full max-w-xl max-h-[92vh] overflow-y-auto bg-slate-900 border border-slate-800 rounded-2xl p-6 relative shadow-2xl">
+      <div class="flex justify-between items-start pb-3 border-b border-slate-800">
+        <div>
+          <span id="facCode" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">ENG-B1</span>
+          <h3 id="facTitle" class="text-lg font-bold text-white mt-1">Engineering Complex</h3>
+        </div>
+        <button data-autofocus onclick="closeFacilityModal()" aria-label="Close facility details" class="text-slate-400 hover:text-white text-lg p-1"><span aria-hidden="true">✕</span></button>
+      </div>
+
+      <div class="my-4 space-y-4 text-xs">
+        
+        <!-- Area Stats -->
+        <div class="grid grid-cols-3 gap-2 text-center">
+          <div class="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
+            <div class="text-[10px] text-slate-400 uppercase">Gross Area</div>
+            <div id="facArea" class="font-mono font-bold text-slate-200 mt-0.5">45,000 sq.ft</div>
+          </div>
+          <div class="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
+            <div class="text-[10px] text-slate-400 uppercase">Roof PV Space</div>
+            <div id="facRoof" class="font-mono font-bold text-amber-400 mt-0.5">25,000 sq.ft</div>
+          </div>
+          <div class="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
+            <div class="text-[10px] text-slate-400 uppercase">Occupancy Cap</div>
+            <div id="facCapacity" class="font-mono font-bold text-cyan-400 mt-0.5">1,200</div>
+          </div>
+        </div>
+
+        <!-- Floors & Rooms -->
+        <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800">
+          <div class="text-[10px] text-slate-400 uppercase font-bold flex justify-between">
+            <span>Floors &amp; Rooms</span>
+            <span id="facFloorCount" class="text-emerald-400 font-mono">5 floors</span>
+          </div>
+          <div class="grid grid-cols-4 gap-2 mt-2 text-center">
+            <div class="p-2 rounded-lg bg-slate-900 border border-slate-800"><div class="text-[9px] text-slate-400 uppercase">🎓 Classrooms</div><div id="facTotClassrooms" class="font-mono font-bold text-white mt-0.5">0</div></div>
+            <div class="p-2 rounded-lg bg-slate-900 border border-slate-800"><div class="text-[9px] text-slate-400 uppercase">🏛️ Dept. rooms</div><div id="facTotDeptRooms" class="font-mono font-bold text-white mt-0.5">0</div></div>
+            <div class="p-2 rounded-lg bg-slate-900 border border-slate-800"><div class="text-[9px] text-slate-400 uppercase">🚻 Washrooms</div><div id="facTotWashrooms" class="font-mono font-bold text-white mt-0.5">0</div></div>
+            <div class="p-2 rounded-lg bg-slate-900 border border-slate-800"><div class="text-[9px] text-slate-400 uppercase">🔬 Labs</div><div id="facTotLabs" class="font-mono font-bold text-white mt-0.5">0</div></div>
+          </div>
+          <div class="mt-2.5 max-h-44 overflow-y-auto rounded-lg border border-slate-800">
+            <table class="w-full text-[11px] font-mono">
+              <thead class="sticky top-0 bg-slate-900 text-slate-400"><tr><th class="px-2 py-1 text-left">Floor</th><th class="px-2 py-1">Classrooms</th><th class="px-2 py-1">Dept.</th><th class="px-2 py-1">Washrooms</th><th class="px-2 py-1">Labs</th></tr></thead>
+              <tbody id="facFloorRows"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Telemetry Stream -->
+        <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+          <div class="text-[10px] text-slate-400 uppercase font-bold flex justify-between">
+            <span>Live Sensor Streams</span>
+            <span id="facTelemetryTag" class="text-emerald-400 font-mono">● Active</span>
+          </div>
+          <div class="grid grid-cols-2 gap-2 font-mono text-xs">
+            <div>⚡ Power: <span id="facKw" class="text-amber-400 font-bold">30.3 kW</span></div>
+            <div>💧 Flow: <span id="facWater" class="text-cyan-400 font-bold">6.2 LPM</span></div>
+            <div>🌡️ Temp: <span id="facTemp" class="text-rose-400 font-bold">26.4°C</span></div>
+            <div>♻️ Bin: <span id="facWaste" class="text-emerald-400 font-bold">74%</span></div>
+          </div>
+        </div>
+
+        <!-- Detected Inefficiency Note -->
+        <div class="p-3.5 rounded-xl bg-rose-950/30 border border-rose-500/30 text-rose-300">
+          <div class="font-bold flex items-center space-x-1.5 text-xs">
+            <span>⚠️ Inefficiency Detected:</span>
+          </div>
+          <p id="facAlert" class="mt-1 text-[11px] leading-relaxed">
+            3 lecture halls detected empty with AC &amp; lights running (Est. 3.7 kW power waste).
+          </p>
+        </div>
+
+      </div>
+
+      <div class="flex space-x-2">
+        <button onclick="closeFacilityModal(); switchTab('simulator');" class="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs transition-all">
+          Simulate Fix in What-If Studio ➔
+        </button>
+        <button onclick="inspectFacilityInSensorTest();" class="flex-1 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs transition-all shadow-md">
+          Test Live Sensor on Building 📡
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== EXECUTIVE PITCH PROPOSAL MODAL ==================== -->
+  <div id="reportModal" role="dialog" aria-modal="true" aria-labelledby="repTitle" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm hidden items-center justify-center p-4 overflow-y-auto">
+    <div class="w-full max-w-3xl bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 relative shadow-2xl my-8 text-xs text-slate-300 space-y-4">
+      
+      <div class="flex justify-between items-start border-b border-slate-800 pb-4">
+        <div>
+          <span class="text-[10px] font-mono uppercase text-emerald-400 font-bold tracking-widest">OFFICIAL CAPITAL OPTIMIZATION PROPOSAL</span>
+          <h2 id="repTitle" class="text-xl font-extrabold text-white mt-1">Campus Sustainability &amp; Utility Cost Reduction Brief</h2>
+          <p id="repCollegeName" class="text-xs text-slate-400 mt-0.5">Prepared for: Principal / Dean of Academic Affairs &amp; Facilities Council</p>
+        </div>
+        <div class="flex items-center space-x-2">
+          <button onclick="window.print()" class="px-3.5 py-1.5 rounded-lg bg-emerald-500 text-slate-950 font-bold text-xs">🖨️ Print / Save PDF</button>
+          <button onclick="closeReportModal()" aria-label="Close executive pitch" class="text-slate-400 hover:text-white text-lg p-1"><span aria-hidden="true">✕</span></button>
+        </div>
+      </div>
+
+      <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+        <h4 class="font-bold text-emerald-400 text-xs">1. Executive Summary &amp; Problem Solved:</h4>
+        <p class="leading-relaxed text-slate-300">
+          Our college facilities experience chronic resource waste during off-peak hours—including unoccupied classrooms with running air conditioners, high-flow restroom taps, and unmonitored utility spikes. By implementing targeted digital twin recommendations prior to capital allocation, our institution can save <strong class="text-emerald-400" id="repSavings">₹1,05,45,147</strong> every year with a rapid payback horizon of <strong class="text-cyan-400" id="repPayback">3.52 years</strong>.
+        </p>
+      </div>
+
+      <!-- Financial Matrix -->
+      <div>
+        <h4 class="font-bold text-emerald-400 text-xs mb-2">2. Financial Feasibility Matrix (in Indian Rupees):</h4>
+        <div class="grid grid-cols-4 gap-2 text-center font-mono">
+          <div class="p-3 rounded-lg bg-slate-950 border border-slate-800">
+            <div class="text-[10px] text-slate-400 uppercase font-sans">Setup CapEx</div>
+            <div id="repCapex" class="text-base font-bold text-white mt-1">₹3,70,99,800</div>
+            <div class="text-[9px] text-slate-500 mt-0.5">Demo Estimate</div>
+          </div>
+          <div class="p-3 rounded-lg bg-slate-950 border border-emerald-500/30">
+            <div class="text-[10px] text-emerald-400 uppercase font-sans">Annual Net Savings</div>
+            <div id="repSavings2" class="text-base font-bold text-emerald-400 mt-1">₹1,05,45,147</div>
+            <div class="text-[9px] text-slate-500 mt-0.5">Demo Estimate</div>
+          </div>
+          <div class="p-3 rounded-lg bg-slate-950 border border-slate-800">
+            <div class="text-[10px] text-slate-400 uppercase font-sans">Payback Period</div>
+            <div id="repPayback2" class="text-base font-bold text-cyan-400 mt-1">3.52 Yrs</div>
+            <div class="text-[9px] text-slate-500 mt-0.5">CapEx ÷ Savings</div>
+          </div>
+          <div class="p-3 rounded-lg bg-slate-950 border border-slate-800">
+            <div class="text-[10px] text-slate-400 uppercase font-sans">5-Yr Net Savings</div>
+            <div id="repNpv" class="text-base font-bold text-white mt-1">+₹1,56,25,935</div>
+            <div class="text-[9px] text-slate-500 mt-0.5">(Savings×5)-CapEx</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Environmental Credentials -->
+      <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between">
+        <div>
+          <div class="font-bold text-white text-xs">Environmental Decarbonization Footprint:</div>
+          <div class="text-[11px] text-slate-400 mt-0.5">
+            Avoids <strong class="text-teal-400" id="repCarbon">840 tCO₂e</strong> annually (equivalent to planting <strong class="text-teal-400" id="repTrees">38,136 mature trees</strong>).
+          </div>
+        </div>
+        <span class="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/30">DEMO ESTIMATE</span>
+      </div>
+
+      <div class="text-[11px] text-slate-500 border-t border-slate-800 pt-3 flex justify-between">
+        <span>Generated via CampusTwin Predictive Simulation Core</span>
+        <span id="repDate"></span>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- FLOATING AUTO-DEMO CONTROLLER -->
+  <div id="autoDemoBanner" role="region" aria-label="Auto-play demo" class="hidden fixed bottom-6 right-6 z-50 bg-slate-900/95 border border-emerald-500 p-4 rounded-2xl shadow-2xl max-w-sm text-xs space-y-2.5 backdrop-blur-md">
+    <div class="flex items-center justify-between">
+      <span class="px-2 py-0.5 rounded bg-emerald-500 text-slate-950 font-bold font-mono text-[10px]" id="demoStepBadge">STEP 1 OF 4</span>
+      <button onclick="stopAutoDemo()" class="text-slate-400 hover:text-white font-mono font-bold text-xs p-1"><span aria-hidden="true">✕</span> Exit Demo</button>
+    </div>
+    <div id="demoStepText" aria-live="polite" class="text-white font-medium leading-relaxed">Entering campus details...</div>
+    <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+      <div id="demoProgressBar" class="bg-emerald-400 h-1.5 transition-all duration-500" style="width: 0%;" role="progressbar" aria-label="Demo progress"></div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="border-t border-slate-900 bg-slate-950 py-4 text-xs text-slate-400">
+    <div class="max-w-7xl mx-auto px-4 space-y-2">
+      <nav aria-label="Footer" class="flex flex-wrap items-center justify-center md:justify-start gap-x-1">
+        <a class="footer-link" href="#main" onclick="switchTab('customizer'); return false;">College Details</a>
+        <a class="footer-link" href="#main" onclick="switchTab('twin'); return false;">Digital Twin</a>
+        <a class="footer-link" href="#main" onclick="switchTab('simulator'); return false;">What-If Simulator</a>
+        <a class="footer-link" href="#main" onclick="switchTab('connect'); return false;">Live Sensor Test</a>
+        <a class="footer-link" href="#main" onclick="openReportModal(); return false;">Executive Pitch</a>
+        <a class="footer-link" href="/api/health" target="_blank" rel="noopener">API status</a>
+      </nav>
+      <div class="flex flex-wrap items-center justify-center md:justify-between gap-2 text-center md:text-left">
+        <p>© <span id="copyYear">2026</span> CampusTwin • Smart Campus Digital Twin &amp; Decarbonization Platform</p>
+        <div class="flex flex-wrap items-center justify-center gap-x-3 font-mono text-[11px]">
+          <span class="text-emerald-400">Currency: Indian Rupee (INR ₹)</span>
+          <span aria-hidden="true">•</span>
+          <span id="gatewayLabel" class="text-cyan-400">Gateway: checking...</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ==================== AI PLANNER (offline rules, copy of server/planner.js) ==================== -->
+  <script>
+/* PLANNER:START (generated from server/planner.js by scripts/sync-planner.js, do not edit here) */
+const CampusPlanner = (() => {
+// =====================================================================
+// CampusTwin AI planner: offline rules engine
+// Pure functions, no dependencies. The server uses this when Claude is not available,
+// and a copy is inlined into client/dist/index.html so the planner still answers when the
+// backend cannot be reached. After editing this file run:  npm run sync-planner
+// =====================================================================
+
+// slider ranges: all 0-100 step 5, except hvac 0-3 step 0.5
+const RANGES = {
+  sensors: [0, 100, 5], solar: [0, 100, 5], hvac: [0, 3, 0.5],
+  aerators: [0, 100, 5], rain: [0, 100, 5], waste: [0, 100, 5], plastic: [0, 100, 5]
+};
+const KEYS = Object.keys(RANGES);
+
+function clampSliders(raw) {
+  const out = {};
+  for (const [k, [min, max, step]] of Object.entries(RANGES)) {
+    let n = Number(raw?.[k]);
+    if (!Number.isFinite(n)) n = 0;
+    n = Math.min(max, Math.max(min, n));
+    out[k] = Math.round(n / step) * step;
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------
+// 1. Explicit measures ("add solar", "fix leaking taps")
+// ---------------------------------------------------------------------
+const MEASURES = [
+  { key: "sensors", label: "occupancy sensors", dflt: 60, share: "kw",
+    re: /\b(sensors?|motion|occupancy|presence|empty (?:rooms?|class\w*|halls?|labs?)|auto[- ]?off|switch(?:ed|ing)? off|turn(?:ed|ing)? off)\b/ },
+  { key: "solar", label: "rooftop solar", dflt: 40, share: "roofSqFt", re: /\b(solar|photovoltaic|pv|panels?)\b/ },
+  { key: "hvac", label: "a higher AC setpoint", dflt: 1.5, share: null,
+    re: /\b(ac|a\/c|hvac|air[- ]?con\w*|cooling|thermostat|set ?point)\b/ },
+  { key: "aerators", label: "tap aerators and leak fixes", dflt: 60, share: "water", re: /\b(aerators?|taps?|faucets?|low[- ]?flow|leaks?|leaking|leakage|fixtures?|cisterns?)\b/ },
+  { key: "rain", label: "rainwater harvesting", dflt: 40, share: "roofSqFt", re: /\b(rainwater|rain ?water|harvest\w*|catchment|recharge)\b/ },
+  { key: "waste", label: "waste segregation", dflt: 60, share: null,
+    re: /\b(segregat\w*|compost\w*|biodigest\w*|biogas|bins?|food scraps?)\b/ },
+  { key: "plastic", label: "plastic reduction", dflt: 50, share: null, re: /\b(plastic|bottles?|refill|single[- ]use)\b/ }
+];
+const EVERYTHING = { sensors: 80, solar: 60, hvac: 2, aerators: 80, rain: 60, waste: 80, plastic: 70 };
+const BALANCED = { sensors: 50, solar: 30, hvac: 1, aerators: 50, rain: 30, waste: 50, plastic: 30 };
+const LABEL = { sensors: "occupancy sensors", solar: "rooftop solar", hvac: "AC setpoint", aerators: "tap aerators and leak fixes",
+  rain: "rainwater harvesting", waste: "waste segregation", plastic: "plastic reduction" };
+const SHARE = Object.fromEntries(MEASURES.map((m) => [m.key, m.share]));
+
+// ---------------------------------------------------------------------
+// 2. Situations: problems, seasons and goals described in plain words.
+//    `all` = every regex must match. specific situations add to explicit measures;
+//    generic ones are used only when nothing more specific was recognised.
+// ---------------------------------------------------------------------
+const SITUATIONS = [
+  { id: "summer", name: "summer heat / peak AC load", specific: true,
+    all: [/\b(summers?|heat ?waves?|hot (?:weather|season|days?|months?)|peak (?:load|demand|season)|scorching|sweltering)\b/],
+    none: [/\b(water|taps?|bore ?wells?|tankers?)\b/], absorbs: ["ac_load"],
+    plan: { hvac: 2, sensors: 50, solar: 50 } },
+  { id: "ac_load", name: "heavy AC consumption", specific: true,
+    all: [/\b(ac|a\/c|air[- ]?con\w*|cooling|hvac)\b/, /\b(high|huge|heavy|big|bill|cost|too|overload\w*|load|consum\w*|expens\w*|waste\w*|running)\b/],
+    plan: { hvac: 2, sensors: 50 } },
+  { id: "power_cut", name: "unreliable grid / power cuts", specific: true,
+    all: [/\b(power ?cuts?|black ?outs?|load[- ]?shedding|outages?|grid (?:fail\w*|down|unreliable|issues?)|diesel|generators?|dg sets?|unstable (?:power|supply))\b/],
+    plan: { solar: 60, sensors: 50 } },
+  { id: "water_shortage", name: "water shortage", specific: true,
+    all: [/\b(shortage|scarcity|crisis|stress|deficit|running out|drought|dries|drying|dry|tankers?|bore ?wells?|no water|low water|water (?:problem|issue|supply)|groundwater)\b/, /\b(water|tankers?|bore ?wells?|groundwater|taps?|supply)\b/],
+    plan: { aerators: 70, rain: 70 } },
+  { id: "monsoon", name: "monsoon / heavy rain", specific: true,
+    all: [/\b(monsoons?|heavy rains?|rainy|rainfall|floods?|flooding|flooded|waterlogg\w*|runoff|storm ?water|cloudburst)\b/],
+    plan: { rain: 80 } },
+  { id: "empty_campus", name: "empty or idle buildings (exams, vacations, nights)", specific: true,
+    all: [/\b(exams?|vacations?|holidays?|breaks?|weekends?|nights?|after[- ]hours|idle|unoccupied|vacant|nobody|no one|standby|phantom|vampire|lights? (?:left )?on|fans? (?:left )?on|left (?:on|running)|forgot\w*|campus (?:is |stays |remains )?(?:empty|closed|shut)|empty campus|(?:is |are |stays? )?empty|closed)\b/],
+    absorbs: ["lights"],
+    plan: { sensors: 85, hvac: 1 } },
+  { id: "lights", name: "lighting and fans left running", specific: true,
+    all: [/\b(lights?|lighting|lamps?|tube ?lights?|fans?|classrooms? (?:power|energy)|appliances?)\b/, /\b(waste\w*|left|running|unused|empty|forgot\w*|all (?:day|night)|24 ?x ?7|high|bill|cost)\b/],
+    plan: { sensors: 70 } },
+  { id: "food_waste", name: "canteen and food waste", specific: true,
+    all: [/\b(canteens?|mess|kitchens?|food|dining|leftovers?|meals?)\b/, /\b(waste\w*|overflow\w*|dump\w*|throw\w*|discard\w*|smell\w*|garbage|trash|scraps?|leftovers?)\b/],
+    absorbs: ["garbage"],
+    plan: { waste: 80, plastic: 40 } },
+  { id: "garbage", name: "garbage and litter", specific: true,
+    all: [/\b(garbage|trash|litter\w*|landfill|dumps?|dumping|rubbish|solid waste|waste (?:problem|issue|pile)|zero[- ]waste)\b/],
+    plan: { waste: 75, plastic: 50 } },
+  { id: "low_budget", name: "a tight budget / quick wins", specific: true,
+    all: [/\b(budget|cheap\w*|afford\w*|low[- ]?cost|inexpensive|quick wins?|low[- ]hanging|without spending|little money|no money|short payback|fast payback|quick payback|payback (?:fast|quick|short)|spend less|minimal (?:cost|investment)|small investment|bootstrap\w*|limited (?:funds?|money))\b/],
+    plan: { sensors: 50, hvac: 1.5, aerators: 60, waste: 50 }, noSolar: true },
+  { id: "ambitious", name: "an all-out sustainability push", specific: true,
+    all: [/\b(net[- ]?zero|carbon[- ]?neutral|fully green|100% green|go all out|all[- ]in|maximum impact|max impact|most ambitious|aggressive(?:ly)?|biggest impact|flagship)\b/],
+    plan: EVERYTHING },
+
+  // ---- generic situations ----
+  { id: "power_bill", name: "a high electricity bill", specific: false,
+    all: [/\b(electric\w*|power|energy|kwh|current bill|light bill|units?|consumption|load)\b/, /\b(high|huge|too (?:much|high)|expensive|rising|increas\w*|spik\w*|reduce|cut|lower|decreas\w*|save|saving|waste\w*|bill|bills|cost|costs|overspend\w*|burden|drain\w*|heavy|improve|efficien\w*)\b/],
+    plan: { sensors: 60, solar: 40, hvac: 1.5 } },
+  { id: "water_bill", name: "high water use or water bills", specific: false,
+    all: [/\b(water|tap|taps|hostels? water|borewell|municipal)\b/, /\b(high|huge|too (?:much|high)|expensive|rising|increas\w*|reduce|cut|lower|decreas\w*|save|saving|waste\w*|wastage|bill|bills|cost|costs|overuse|consumption|usage|efficien\w*|conserv\w*)\b/],
+    plan: { aerators: 65, rain: 45 } },
+  { id: "carbon", name: "a carbon / sustainability goal", specific: false,
+    all: [/\b(carbon|emissions?|co2|co₂|footprint|climate|greenhouse|decarboni\w*|sustainab\w*|esg|naac|nirf|rating|ranking|eco[- ]?friendly|environment\w*|green(?:er)? campus|go(?:ing)? green|green(?:ing)?)\b/],
+    plan: { sensors: 60, solar: 50, hvac: 1, aerators: 50, rain: 40, waste: 60, plastic: 40 } },
+  { id: "waste_generic", name: "a waste problem", specific: false,
+    all: [/\b(waste|wastage|recycl\w*|disposal|segregation|biodegradable)\b/],
+    none: [/\bwast\w*\b[^.,;]{0,25}\b(water|electric\w*|power|energy|current|ac)\b/],
+    plan: { waste: 70, plastic: 40 } },
+  { id: "comfort", name: "heat complaints / comfort", specific: false,
+    all: [/\b(hot|warm|uncomfortable|sweat\w*|stuffy|humid|temperature|complain\w*)\b/],
+    plan: { hvac: 1, sensors: 40 } },
+  { id: "energy_generic", name: "an energy question", specific: false,
+    all: [/\b(electricity|electric|power|energy|kwh|kw|units?|grid|renewable|green energy|clean energy)\b/],
+    plan: { sensors: 60, solar: 40, hvac: 1.5 } },
+  { id: "water_generic", name: "a water question", specific: false,
+    all: [/\b(water|taps?|plumbing|sanitation|washrooms?|toilets?|flush\w*)\b/],
+    plan: { aerators: 60, rain: 40 } }
+];
+
+const UNSUPPORTED = [
+  [/\b(budget|lakhs?|crores?|₹|rs\.?|rupees?|inr|loan|fund\w*|grant|subsid\w*)\b/, "budgets and funding are not controls; read cost and payback in the results"],
+  [/\b(tariffs?|per unit|price hike|rate hike)\b/, "tariffs are set in College Details"],
+  [/\b(enrol\w*|headcount|admissions?|population|expansion|growth|more students|(?:\d[\d,]*|extra|additional|new) students?|new (?:building|block|hostel))\b/, "headcount and new buildings are set in College Details and Buildings & Facilities"],
+  [/\b(leds?|bulbs?|lamps?|tube ?lights?|batter(?:y|ies)|storage|evs?|electric vehicles?|wind|generators?|diesel|dg sets?|inverters?)\b/, "LED retrofits, batteries, generators, EVs and wind have no slider yet"],
+  [/\b(reduce|cut|lower|decrease|save|drop|slash|bring down)\b[^.,;]{0,60}\bby\s+\d+(?:\.\d+)?\s*(?:%|percent|per cent)/, "a specific % target is not a control, so this is a strong starting plan: read the savings in the results and adjust the sliders to reach your target"]
+];
+
+const ON_TOPIC = /\b(campus|college|university|institute|hostels?|buildings?|blocks?|classrooms?|labs?|library|canteen|bills?|costs?|sav(?:e|ing|ings)|electric\w*|power|energy|water|waste|carbon|sustainab\w*|green|emissions?|climate|efficien\w*|resources?|utility|utilities|what (?:should|can|do) we|recommend\w*|suggest\w*|advice|where (?:do|should) we start|best way|priorit\w*|improve|plan)\b/;
+
+const EXAMPLES = [
+  "Our electricity bill is too high, what can we do?",
+  "Water shortage in the hostels this summer",
+  "Exams are over and the campus is empty for two months",
+  "We have a tight budget, what are the quick wins?",
+  "Heavy monsoon expected, make use of the rain",
+  "Canteen waste is overflowing every day"
+];
+
+function quantityIn(text, key) {
+  if (key === "hvac") {
+    const m = text.match(/(\d+(?:\.\d+)?)\s*(?:°|deg\w*|c\b)/);
+    if (!m) return null;
+    const n = Number(m[1]);
+    return n >= 16 ? Math.max(0, n - 24) : n;   // "AC at 26°C" is read as +2°C over a 24°C baseline
+  }
+  const pct = text.match(/(\d+(?:\.\d+)?)\s*(?:%|percent|per cent)/);
+  if (pct) return Number(pct[1]);
+  if (/\bhalf\b/.test(text)) return 50;
+  if (/\bquarter\b/.test(text)) return 25;
+  if (/\bthird\b/.test(text)) return 33;
+  if (/\b(most|majority)\b/.test(text)) return 75;
+  if (/\b(some|few|partial\w*|pilot|small)\b/.test(text)) return 25;
+  if (/\b(all|every|entire|whole|full|fully|everywhere)\b/.test(text)) return 100;
+  return null;
+}
+
+// Share of a campus resource held by the buildings a clause names ("hostel", "library", ...)
+function scopeShare(text, resource, campus) {
+  if (!campus?.buildings?.length || !resource) return null;
+  const words = new Set(text.split(/[^a-z]+/).filter((w) => w.length >= 4).map((w) => w.replace(/s$/, "")));
+  const field = (b) => (resource === "kw" ? b.kw : resource === "water" ? b.water : b.roofSqFt);
+  const total = campus.buildings.reduce((t, b) => t + field(b), 0);
+  if (!(total > 0)) return null;
+  const skip = ["block", "campus", "center", "centre", "complex", "water", "power", "energy"];
+  const matched = campus.buildings.filter((b) => {
+    const tokens = `${b.name} ${b.type || ""}`.toLowerCase().split(/[^a-z]+/).filter((w) => w.length >= 4).map((w) => w.replace(/s$/, ""));
+    return tokens.some((t) => words.has(t) && !skip.includes(t));
+  });
+  if (!matched.length || matched.length === campus.buildings.length) return null;
+  return matched.reduce((t, b) => t + field(b), 0) / total;
+}
+
+const fmtVal = (key, v) => (key === "hvac" ? `+${v}°C` : `${v}%`);
+
+function fallback(q, current, campus) {
+  let t = " " + String(q).toLowerCase().replace(/[’']/g, "'") + " ";
+  // "every day" is a frequency, not "100%"
+  t = t.replace(/\bevery (?:day|night|week|month|year|morning|evening|semester|summer|time)\b/g, "daily");
+
+  // "also add X" builds on the current sliders; "A and also B" is just a conjunction
+  const incremental = /\b(?:we|i) also\b|\balso (?:add|install|put|include|fix|do)\b|\bin addition\b|\badditionally\b|\bon top of\b|\bas well as (?:the )?(?:current|existing)\b|\bkeep (?:the )?(?:current|existing)\b/.test(t);
+  const s = incremental && current ? { ...clampSliders(current) } : Object.fromEntries(KEYS.map((k) => [k, 0]));
+  const noteMap = {};
+  const reasons = [];
+  let everything = false;
+  let matched = false;
+
+  // A goal such as "cut the bill by 30%" is not a slider amount
+  const goalRe = /\b(reduce|cut|lower|decrease|save|drop|slash|bring down)\b([^.,;]{0,60}?)\bby\s+\d+(?:\.\d+)?\s*(?:%|percent|per cent)/g;
+  const tq = t.replace(goalRe, (m, verb, mid) => verb + mid);
+
+  // ---- explicit measures ----
+  const fixed = new Set();       // keys the user gave an explicit amount (or switched off)
+  const defaulted = new Set();   // keys named without an amount
+  if (/\b(everything|all (?:the )?measures|all of (?:the )?above|full package|max(?:imum)? out)\b/.test(tq)) {
+    Object.assign(s, EVERYTHING);
+    KEYS.forEach((k) => fixed.add(k));
+    everything = true;
+    matched = true;
+  } else {
+    const clauses = tq.split(/[,;.?!]|\band\b|\bplus\b|\balso\b|\bwhile\b|\bthen\b|\bbut\b/).map((c) => c.trim()).filter(Boolean);
+    const pcts = tq.match(/\d+(?:\.\d+)?\s*(?:%|percent|per cent)/g) || [];
+    for (const m of MEASURES) {
+      const hit = clauses.filter((c) => m.re.test(c));
+      if (!hit.length) continue;
+      matched = true;
+      const clause = hit[0];
+      if (/\b(without|no|skip|except|exclude|remove|drop|don'?t|do not|not)\b/.test(clause)) {
+        s[m.key] = 0;
+        fixed.add(m.key);
+        noteMap[m.key] = { off: true };
+        continue;
+      }
+      // A quantity counts only inside the clause that names the measure,
+      // except one lone percentage in the whole sentence ("solar and sensors at 50%")
+      let amount = quantityIn(clause, m.key) ?? (m.key !== "hvac" && pcts.length === 1 ? quantityIn(pcts[0], m.key) : null);
+      let how = "";
+      if (amount === null) { amount = m.dflt; defaulted.add(m.key); how = "default"; } else fixed.add(m.key);
+      const share = scopeShare(clause, m.share, campus);
+      if (share !== null && m.key !== "hvac") { amount = amount * share; how = "scaled to the named buildings"; }
+      s[m.key] = amount;
+      noteMap[m.key] = { how: how ? " (" + how + ")" : "" };
+    }
+  }
+
+  // ---- situations ----
+  const hits = SITUATIONS.filter((sit) => sit.all.every((re) => re.test(tq)) && !(sit.none || []).some((re) => re.test(tq)));
+  const specific = hits.filter((h) => h.specific);
+  let use = specific;
+  if (!specific.length && !matched) {
+    use = hits.slice();
+    // the broad energy / water catch-alls only speak when nothing sharper matched
+    if (use.length > 1) use = use.filter((u) => u.id !== "energy_generic" && u.id !== "water_generic");
+    use = use.slice(0, 3);
+  }
+  use = use.filter((u) => !use.some((o) => (o.absorbs || []).includes(u.id)));
+  if (use.length) {
+    const plan = {};
+    for (const sit of use) {
+      for (const [k, v] of Object.entries(sit.plan)) plan[k] = Math.max(plan[k] ?? 0, v);
+      reasons.push(sit.name);
+    }
+    if (use.some((u) => u.noSolar)) { delete plan.solar; delete plan.rain; }
+    let any = false;
+    for (const [k, v0] of Object.entries(plan)) {
+      if (fixed.has(k)) continue;                       // the user's own number wins
+      let v = v0;
+      const share = k === "hvac" ? null : scopeShare(tq, SHARE[k], campus);
+      if (share !== null) v = v * share;
+      s[k] = Math.max(s[k], v);
+      noteMap[k] = { how: share !== null ? " (scaled to the named buildings)" : "" };
+      any = true;
+    }
+    if (any) matched = true;
+  }
+
+  // ---- on-topic but nothing specific: balanced starter plan ----
+  let starter = false;
+  if (!matched && ON_TOPIC.test(tq)) {
+    Object.assign(s, BALANCED);
+    matched = true;
+    starter = true;
+  }
+  const unsupported = UNSUPPORTED.filter(([re]) => re.test(t)).map(([, msg]) => msg).join("; ");
+  const sliders = clampSliders(s);
+  const notes = KEYS.filter((k) => noteMap[k]).map((k) => noteMap[k].off ? `${LABEL[k]} off` : `${LABEL[k]} ${fmtVal(k, sliders[k])}${noteMap[k].how || ""}`);
+  if (everything) notes.unshift("every measure at a high level");
+
+  if (!matched) {
+    return {
+      matched: false, sliders, unsupported, intent: "off-topic",
+      explanation: "I turn campus problems and what-ifs into simulator settings, but I could not connect that to energy, water or waste. Describe a situation, for example “our power bill is too high”, “water shortage in the hostels” or “campus is empty during exams”."
+    };
+  }
+
+  let explanation;
+  if (starter) {
+    explanation = "I could not pin that to one problem, so I set a balanced starter plan across energy, water and waste. Tell me what hurts most, such as the power bill, water, waste or heat, and I will focus it.";
+  } else if (reasons.length) {
+    explanation = `That sounds like ${reasons.join(" and ")}. I set ${notes.join(", ")}. Fine-tune with the sliders.`;
+  } else {
+    explanation = "Offline rules set: " + notes.join(", ") + ". Percentages are read from your wording, so fine-tune with the sliders.";
+  }
+  return { matched: true, sliders, unsupported, explanation, intent: starter ? "starter" : reasons.length ? "situation" : "measures" };
+}
+
+return { fallback, clampSliders, EXAMPLES };
+})();
+/* PLANNER:END */
+  </script>
+
+  <!-- ==================== JAVASCRIPT LOGIC ==================== -->
+  <script>
+    // =====================================================================
+    // CampusTwin front end
+    // =====================================================================
+    const $ = (id) => document.getElementById(id);
+    const inrFormatter = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+    const formatINR = (amount) => inrFormatter.format(Math.round(amount || 0));
+    const fmtNum = (n, d = 0) => Number(n).toLocaleString('en-IN', { minimumFractionDigits: d, maximumFractionDigits: d });
+    const round1 = (n) => Math.round(n * 10) / 10;
+    const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const reducedMotion = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // ---- Screen-reader announcements + visible toast ----
+    let toastTimer = null;
+    function announce(msg) {
+      const el = $('a11yAnnouncer');
+      if (!el) return;
+      el.textContent = '';
+      setTimeout(() => { el.textContent = msg; }, 30);
+    }
+    function showToast(msg, tone = 'ok') {
+      const el = $('appToast');
+      if (!el) return;
+      el.textContent = msg;
+      el.setAttribute('role', tone === 'error' ? 'alert' : 'status');
+      el.className = 'fixed bottom-6 left-6 z-50 max-w-sm px-4 py-3 rounded-xl text-xs font-mono shadow-2xl border ' +
+        (tone === 'error' ? 'bg-rose-950/95 border-rose-500/60 text-rose-200' : tone === 'warn' ? 'bg-amber-950/95 border-amber-500/50 text-amber-200' : 'bg-emerald-950/95 border-emerald-500/50 text-emerald-200');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.add('hidden'), 5000);
+    }
+
+    // ---- App state ----
+    let currentLayer = 'energy';
+    let currentAreaUnit = 'sqft';   // 'sqft' | 'acres' | 'sqm'
+    let currentSelectedFacility = 'b1';
+
+    // College setup (base area stored in sq.ft). Also the single source of truth for the model.
+    let campusConfig = {
+      name: 'Apex Institute of Technology',
+      areaSqFt: 252000,
+      buildingCount: 6,
+      students: 4800,
+      rateElec: 9.50,          // INR / kWh
+      monthlyKWh: 125000,      // kWh / month
+      rateWater: 45.00,        // INR / kL
+      monthlyWaterKL: 1800,    // kL / month
+      rateWaste: 5.50          // INR / kg
+    };
+
+    // =====================================================================
+    // Buildings: generated from the college details (count, area, load, students)
+    // =====================================================================
+    // Sample facility templates. Values are demo data, not measurements.
+    // kw / water are AVERAGE loads (kW, L/min). They sum to the default college details:
+    // 125,000 kWh/month = 171 kW average and 1,800 kL/month = 41 L/min average.
+    const BUILDING_TEMPLATES = [
+      { id: 'b1', type: 'academic', floors: 5, code: 'ENG-B1', name: 'Engineering & Tech Complex', short: 'Engineering Complex', area: 45000, roof: 25000, capacity: 1200, kw: 30.3, water: 6.2, temp: 26.4, waste: 74, warn: true,  alert: '3 empty lecture halls detected with AC & 18 lights running (Est. 3.7 kW power waste)' },
+      { id: 'b2', type: 'lab', floors: 4, code: 'SCI-B2', name: 'Science & Computing Labs',  short: 'Science & Labs',      area: 32000, roof: 18000, capacity: 650,  kw: 42.2, water: 2.5,  temp: 22.8, waste: 45, warn: false, alert: 'High compute load; server room cooling setpoint optimal at 22.8°C' },
+      { id: 'b3', type: 'library', floors: 4, code: 'LIB-B3', name: 'Knowledge & Library Center', short: 'Central Library',    area: 28000, roof: 20000, capacity: 800,  kw: 17.5,  water: 1.6,  temp: 24.1, waste: 62, warn: false, alert: 'Floor 3 reading hall 15% occupied but fully illuminated with 60 lamps' },
+      { id: 'b4', type: 'canteen', floors: 2, code: 'DIN-B4', name: 'Dining Commons & Canteen',   short: 'Dining & Union',     area: 22000, roof: 14000, capacity: 1100, kw: 23.5,  water: 9.8, temp: 27.5, waste: 91, warn: false, alert: '280kg organic food waste generated daily; 91% waste bin overflow risk' },
+      { id: 'b5', type: 'hostel', floors: 6, code: 'RES-B5', name: 'Residential Hostels',        short: 'Residential Hostels', area: 75000, roof: 35000, capacity: 1400, kw: 47.0,  water: 16.4, temp: 25.8, waste: 80, warn: false, alert: 'Peak morning water flow at 64 LPM; 6 leaking cistern valves in South Wing' },
+      { id: 'b6', type: 'sports', floors: 1, code: 'SPT-B6', name: 'Sports Arena & Grounds',     short: 'Sports Arena',       area: 50000, roof: 22000, capacity: 500,  kw: 10.8,  water: 4.6, temp: 28.2, waste: 53, warn: false, alert: 'Athletics lawns currently irrigated with fresh municipal drinking water' }
+    ];
+    // If fewer than 6 buildings are requested, keep the most significant ones first.
+    const TEMPLATE_PRIORITY = ['b1', 'b5', 'b2', 'b4', 'b3', 'b6'];
+    // Types used when more than 6 buildings are requested.
+    const EXTRA_TYPES = [
+      { prefix: 'ACD', type: 'academic', floors: 4, name: 'Academic Block',        kw: 60,  water: 12, area: 30000, roofRatio: 0.55, capacity: 700 },
+      { prefix: 'HST', type: 'hostel', floors: 5, name: 'Hostel Block',          kw: 110, water: 45, area: 50000, roofRatio: 0.50, capacity: 600 },
+      { prefix: 'ADM', type: 'admin', floors: 3, name: 'Administrative Block',  kw: 45,  water: 6,  area: 18000, roofRatio: 0.60, capacity: 150 },
+      { prefix: 'WRK', type: 'workshop', floors: 2, name: 'Workshop & Maker Space', kw: 85, water: 10, area: 24000, roofRatio: 0.65, capacity: 300 },
+      { prefix: 'AUD', type: 'auditorium', floors: 2, name: 'Auditorium',            kw: 70,  water: 8,  area: 20000, roofRatio: 0.70, capacity: 900 },
+      { prefix: 'RSC', type: 'lab', floors: 4, name: 'Research Centre',       kw: 130, water: 10, area: 26000, roofRatio: 0.55, capacity: 250 },
+      { prefix: 'FAC', type: 'hostel', floors: 5, name: 'Faculty Housing',       kw: 55,  water: 30, area: 35000, roofRatio: 0.50, capacity: 200 },
+      { prefix: 'MED', type: 'medical', floors: 3, name: 'Medical Centre',        kw: 50,  water: 12, area: 12000, roofRatio: 0.55, capacity: 100 }
+    ];
+    // Reference campus the templates describe. Loads/areas scale from these.
+    const REF = { students: 4800 };
+    const MAX_BUILDINGS = 50;
+    const LIVE_TTL_MS = 10 * 60 * 1000;   // a live reading older than this stops feeding the model
+    const HOURS_PER_MONTH = 730;
+    // Average campus draw implied by the college details (what the building loads must add up to)
+    const avgCampusKw = (cfg) => cfg.monthlyKWh / HOURS_PER_MONTH;
+    const avgCampusLpm = (cfg) => (cfg.monthlyWaterKL * 1000) / (HOURS_PER_MONTH * 60);
+    // Building types for user-entered facilities: [label, code prefix]
+    const FACILITY_TYPES = {
+      academic: ['Academic block', 'ACD'], lab: ['Lab / research', 'LAB'], hostel: ['Hostel / residential', 'HST'],
+      library: ['Library', 'LIB'], canteen: ['Canteen / dining', 'DIN'], admin: ['Administrative', 'ADM'],
+      sports: ['Sports / grounds', 'SPT'], auditorium: ['Auditorium', 'AUD'], medical: ['Medical centre', 'MED'],
+      workshop: ['Workshop', 'WRK'], other: ['Other facility', 'OTH']
+    };
+    const CODE_PREFIX_TYPE = { ENG: 'academic', ACD: 'academic', SCI: 'lab', RSC: 'lab', LAB: 'lab', RES: 'hostel', HST: 'hostel', FAC: 'hostel',
+      LIB: 'library', DIN: 'canteen', ADM: 'admin', SPT: 'sports', AUD: 'auditorium', MED: 'medical', WRK: 'workshop' };
+
+    // ---- Floors, and the rooms on each floor ----
+    const ROOM_KEYS = [
+      { key: 'classrooms', label: 'Classrooms', icon: '🎓' },
+      { key: 'deptRooms', label: 'Dept. rooms', icon: '🏛️' },
+      { key: 'washrooms', label: 'Washrooms', icon: '🚻' },
+      { key: 'labs', label: 'Labs', icon: '🔬' }
+    ];
+    const MAX_FLOORS = 60, MAX_ROOMS = 500;
+    // Typical rooms on ONE floor by building type: [classrooms, department rooms, washrooms, labs] (sample data)
+    const ROOM_DEFAULTS = {
+      academic: [6, 3, 2, 1], lab: [2, 2, 2, 4], hostel: [0, 1, 6, 0], library: [2, 1, 2, 0], canteen: [0, 1, 3, 0],
+      admin: [1, 6, 3, 0], sports: [0, 2, 4, 0], auditorium: [2, 1, 3, 0], medical: [0, 3, 2, 1], workshop: [1, 1, 2, 3], other: [1, 1, 2, 0]
+    };
+    const floorName = (i) => (i === 0 ? 'Ground floor' : 'Floor ' + i);
+    function defaultFloorPlan(type, floors) {
+      const [c, d, w, l] = ROOM_DEFAULTS[type] || ROOM_DEFAULTS.other;
+      return Array.from({ length: floors }, (_, i) => {
+        const top = floors > 2 && i === floors - 1;
+        return { classrooms: Math.max(0, c - (top ? 1 : 0)), deptRooms: d > 0 && i === 0 ? d + 1 : d, washrooms: w, labs: Math.max(0, l - (top && l > 1 ? 1 : 0)) };
+      });
+    }
+    function defaultFloorCount(type, areaSqFt) {
+      const per = ['academic', 'lab', 'hostel'].includes(type) ? 10000 : 15000;
+      return Math.max(1, Math.min(12, Math.ceil((Number(areaSqFt) || 0) / per)));
+    }
+    // Resize a floor plan to n floors. New floors copy the previous floor (or a floor remembered in `stash`)
+    function resizeFloorPlan(plan, n, type, stash) {
+      const cur = Array.isArray(plan) ? plan : [];
+      const out = [];
+      for (let i = 0; i < n; i++) {
+        if (cur[i]) out.push({ ...cur[i] });
+        else if (stash && stash[i]) out.push({ ...stash[i] });
+        else if (out.length) out.push({ ...out[out.length - 1] });
+        else out.push(defaultFloorPlan(type, 1)[0]);
+      }
+      return out;
+    }
+    // Fills floors / floorPlan for buildings saved before this feature existed
+    function normalizeFloorData(f) {
+      const type = FACILITY_TYPES[f.type] ? f.type : 'other';
+      if (f.floors === undefined || f.floors === null) f.floors = defaultFloorCount(type, f.areaSqFt);
+      const n = Number(f.floors);
+      if (f.floors !== '' && Number.isInteger(n) && n >= 1 && n <= MAX_FLOORS) {
+        if (!Array.isArray(f.floorPlan) || !f.floorPlan.length) f.floorPlan = defaultFloorPlan(type, n);
+        else if (f.floorPlan.length !== n) f.floorPlan = resizeFloorPlan(f.floorPlan, n, type, f._stash);
+      } else if (!Array.isArray(f.floorPlan)) f.floorPlan = [];
+      return f;
+    }
+    function floorTotals(plan) {
+      const t = { classrooms: 0, deptRooms: 0, washrooms: 0, labs: 0 };
+      (plan || []).forEach(r => ROOM_KEYS.forEach(k => { t[k.key] += Number(r && r[k.key]) || 0; }));
+      return t;
+    }
+    function roomChipsHtml(b) {
+      const t = floorTotals(b.floorPlan);
+      return `<div class="mt-2.5 flex flex-wrap gap-1"><span class="fac-chip" title="Floors">🏢 ${b.floors} ${b.floors === 1 ? 'floor' : 'floors'}</span>` +
+        ROOM_KEYS.map(k => `<span class="fac-chip" title="${k.label}">${k.icon} ${t[k.key]} ${k.label.toLowerCase()}</span>`).join('') + '</div>';
+    }
+
+    // A building the user entered by hand (Customizer > Buildings & Facilities)
+    function buildFromFacility(f0) {
+      const f = normalizeFloorData({ ...f0 });
+      const type = FACILITY_TYPES[f.type] || FACILITY_TYPES.other;
+      const code = f.code || `${type[1]}-${f.id.toUpperCase()}`;
+      const note = f.alert || `No inefficiency flagged yet for this ${type[0].toLowerCase()}`;
+      const temp = Number.isFinite(f.temp) ? f.temp : 25, waste = Number.isFinite(f.waste) ? f.waste : 50;
+      return {
+        id: f.id, code, name: f.name, short: f.name, type: f.type,
+        floors: Number(f.floors), floorPlan: f.floorPlan.map(r => ({ ...r })),
+        areaSqFt: Math.round(f.areaSqFt), roofSqFt: Math.round(f.roofSqFt), capacity: Math.round(f.capacity), waste,
+        kwNom: f.kw, waterNom: f.water, tempNom: temp, warnNom: !!f.warn, alertNom: note,
+        kw: f.kw, water: f.water, temp, empty: 0, warn: !!f.warn, alert: note, isLive: false, lastUpdate: null
+      };
+    }
+
+    function generateBuildings(cfg, custom) {
+      if (custom && custom.length) return custom.map(buildFromFacility);
+      const n = Math.max(1, Math.min(MAX_BUILDINGS, Math.round(cfg.buildingCount) || 6));
+
+      const seeds = [];
+      for (let i = 0; i < n; i++) {
+        if (i < 6) {
+          const t = BUILDING_TEMPLATES.find(x => x.id === TEMPLATE_PRIORITY[i]);
+          seeds.push({ id: t.id, type: t.type, floors: t.floors, code: t.code, name: t.name, short: t.short, wKw: t.kw, wWater: t.water, wArea: t.area, roofRatio: t.roof / t.area,
+            capacity: t.capacity, temp: t.temp, waste: t.waste, warn: t.warn, alert: t.alert });
+        } else {
+          const num = i + 1;
+          const x = EXTRA_TYPES[(num - 7) % EXTRA_TYPES.length];
+          seeds.push({ id: 'b' + num, type: x.type, floors: x.floors, code: `${x.prefix}-B${num}`, name: `${x.name} ${num}`, short: `${x.name} ${num}`, wKw: x.kw, wWater: x.water, wArea: x.area,
+            roofRatio: x.roofRatio, capacity: x.capacity, temp: round1(24 + ((num * 7) % 5) * 0.7), waste: 40 + ((num * 13) % 45), warn: false,
+            alert: 'No inefficiency flagged in the sample data for this block' });
+        }
+      }
+      seeds.sort((a, b) => parseInt(a.id.slice(1), 10) - parseInt(b.id.slice(1), 10));
+
+      const sum = (k) => seeds.reduce((t, s) => t + s[k], 0);
+      // Building loads always add up to the average draw implied by the monthly bills
+      const targetKw = avgCampusKw(cfg);
+      const targetWater = avgCampusLpm(cfg);
+      const studentScale = cfg.students / REF.students;
+
+      return seeds.map(s => {
+        const areaSqFt = Math.round(cfg.areaSqFt * s.wArea / sum('wArea'));
+        const kwNom = round1(targetKw * s.wKw / sum('wKw'));
+        const waterNom = round1(targetWater * s.wWater / sum('wWater'));
+        return {
+          id: s.id, code: s.code, name: s.name, short: s.short,
+          type: s.type, floors: s.floors, floorPlan: defaultFloorPlan(s.type, s.floors),
+          areaSqFt, roofSqFt: Math.round(areaSqFt * s.roofRatio),
+          capacity: Math.max(1, Math.round(s.capacity * studentScale)),
+          waste: s.waste,
+          kwNom, waterNom, tempNom: s.temp, warnNom: s.warn, alertNom: s.alert,
+          kw: kwNom, water: waterNom, temp: s.temp, empty: 0, warn: s.warn, alert: s.alert,
+          isLive: false, lastUpdate: null
+        };
+      });
+    }
+
+    let customFacilities = null;   // null = auto-generated sample buildings; array = user-entered buildings
+    let campusBuildings = generateBuildings(campusConfig, customFacilities);
+    const liveReadings = {};   // id -> { kw, water, temp, empty, ts }  (survives rebuilds)
+
+    const findB = (id) => campusBuildings.find(b => b.id === id);
+    const fmtArea = (n) => fmtNum(n) + ' sq.ft';
+
+    function liveAlertText(r) {
+      return r.empty > 0
+        ? `⚠️ Live Ingest: ${r.empty} lecture halls detected empty with AC & lights running! Power spike at ${r.kw} kW`
+        : `✓ Live Ingest: Sensors active. Appliance usage balanced; idle rooms shut down (${r.kw} kW)`;
+    }
+    function applyLive(b, r) {
+      b.kw = r.kw; b.water = r.water; b.temp = r.temp; b.empty = r.empty;
+      b.isLive = true; b.warn = r.empty > 0; b.alert = liveAlertText(r);
+      b.lastUpdate = new Date(r.ts).toISOString();
+    }
+    function clearLive(b) {
+      delete liveReadings[b.id];
+      b.isLive = false; b.kw = b.kwNom; b.water = b.waterNom; b.temp = b.tempNom;
+      b.empty = 0; b.warn = b.warnNom; b.alert = b.alertNom; b.lastUpdate = null;
+    }
+    function setLive(id, r) {
+      const b = findB(id);
+      if (!b) return false;
+      liveReadings[id] = r;
+      applyLive(b, r);
+      return true;
+    }
+    function rebuildBuildings() {
+      campusBuildings = generateBuildings(campusConfig, customFacilities);
+      Object.keys(liveReadings).forEach(id => { if (!findB(id)) delete liveReadings[id]; });   // building was removed
+      campusBuildings.forEach(b => { if (liveReadings[b.id]) applyLive(b, liveReadings[b.id]); });
+      if (!findB(currentSelectedFacility)) currentSelectedFacility = campusBuildings[0].id;
+    }
+
+    // =====================================================================
+    // Simulation model: pure function (inputs in, numbers out)
+    // =====================================================================
+    // Telemetry feeds the model: for every building we compare the live reading with its
+    // nominal (sample) load. The campus baseline from the college details is scaled by that
+    // ratio, so a live spike raises the baseline bill and a live drop lowers it.
+    function telemetryBaseline(blds) {
+      let nomKw = 0, effKw = 0, nomW = 0, effW = 0, live = 0;
+      blds.forEach(b => {
+        nomKw += b.kwNom; nomW += b.waterNom;
+        effKw += b.isLive ? b.kw : b.kwNom;
+        effW += b.isLive ? b.water : b.waterNom;
+        if (b.isLive) live++;
+      });
+      const clamp = (v) => Math.min(2, Math.max(0.5, v));
+      const rawE = nomKw > 0 ? effKw / nomKw : 1;
+      const rawW = nomW > 0 ? effW / nomW : 1;
+      return { elecFactor: clamp(rawE), waterFactor: clamp(rawW), capped: rawE !== clamp(rawE) || rawW !== clamp(rawW), liveCount: live, total: blds.length };
+    }
+
+    function simulate(s, cfg, blds) {
+      const tb = telemetryBaseline(blds);
+      // ---- Assumptions (unit costs/yields are estimates: verify before presenting as fact) ----
+      const scale = Math.max(0.1, cfg.areaSqFt / 252000);                 // unit counts scale with campus size
+      const sumRoof = blds.reduce((t, b) => t + b.roofSqFt, 0);           // real roof area from the building list
+      const usableRoofSqFt = sumRoof * 0.6;                               // 60% of roof usable for PV
+
+      const annualCampusKWh = cfg.monthlyKWh * 12 * tb.elecFactor;
+      const annualCampusWaterL = cfg.monthlyWaterKL * 12 * 1000 * tb.waterFactor;
+      const baselineWasteKg = Math.round(168000 * scale);
+
+      // Energy: efficiency first, then solar offsets what is LEFT (no double counting, never above 100%)
+      const sensorEnergySavedKWh = Math.round(annualCampusKWh * 0.22 * (s.sensors / 100));
+      const hvacEnergySavedKWh = Math.round(annualCampusKWh * 0.35 * (s.hvac * 0.06));
+      const loadAfterEfficiency = Math.max(0, annualCampusKWh - sensorEnergySavedKWh - hvacEnergySavedKWh);
+      const solarKWp = Math.floor((usableRoofSqFt * (s.solar / 100)) / 95);
+      const solarEnergySavedKWh = Math.min(solarKWp * 1450, loadAfterEfficiency);
+      const totalEnergySavedKWh = sensorEnergySavedKWh + hvacEnergySavedKWh + solarEnergySavedKWh;
+
+      // Water: rain harvesting capped at 30% of remaining demand (storage limit)
+      const aeratorWaterSavedL = Math.round(annualCampusWaterL * 0.35 * (s.aerators / 100));
+      const rainPotentialL = sumRoof * 0.0929 * 0.8 * 0.75 * 1000 * (s.rain / 100);
+      const rainWaterSavedL = Math.round(Math.min(rainPotentialL, Math.max(0, annualCampusWaterL - aeratorWaterSavedL) * 0.3));
+      const totalWaterSavedL = aeratorWaterSavedL + rainWaterSavedL;
+
+      // Waste: annual kg, capped at baseline
+      const wasteDivertedKg = Math.min(baselineWasteKg, Math.round(((s.waste * 650) + (s.plastic * 180)) * scale));
+
+      // Financials (INR)
+      const electricitySavingsINR = totalEnergySavedKWh * cfg.rateElec;
+      const waterSavingsINR = (totalWaterSavedL / 1000) * cfg.rateWater;
+      const wasteSavingsINR = wasteDivertedKg * cfg.rateWaste;
+      const annualNetSavings = Math.round(electricitySavingsINR + waterSavingsINR + wasteSavingsINR);
+
+      // CapEx (scaled to campus size)
+      const sensorCapEx = Math.round((s.sensors / 100) * 70 * scale * 3200);
+      const solarCapEx = Math.round(solarKWp * 68000);
+      const aeratorCapEx = Math.round((s.aerators / 100) * 120 * scale * 450);
+      const rainCapEx = s.rain > 0 ? Math.round((120000 + (s.rain / 100) * 80000) * scale) : 0;
+      const wasteCapEx = Math.round(((s.waste > 0 ? 180000 : 0) + (s.plastic / 100) * 45000 * 2) * scale);
+      const totalCapEx = sensorCapEx + solarCapEx + aeratorCapEx + rainCapEx + wasteCapEx;
+
+      const payback = annualNetSavings > 0 ? totalCapEx / annualNetSavings : null;   // years; null = no savings
+      const carbonTons = Math.round((totalEnergySavedKWh * 0.82) / 1000);            // grid factor: verify against latest CEA value
+      const trees = Math.round(carbonTons * 45.4);
+      const annuity5 = (1 - Math.pow(1.08, -5)) / 0.08;                              // 5 years @ 8% discount rate
+      const npv5 = Math.round(annualNetSavings * annuity5 - totalCapEx);
+
+      const annualBaselineBill = Math.round((annualCampusKWh * cfg.rateElec) + ((annualCampusWaterL / 1000) * cfg.rateWater) + (baselineWasteKg * cfg.rateWaste));
+      const annualGreenBill = Math.max(0, annualBaselineBill - annualNetSavings);
+
+      return {
+        telemetry: tb,
+        totalCapEx, annualNetSavings, payback, carbonTons, trees, npv5,
+        annualBaselineBill, annualGreenBill,
+        baselineEnergyMWh: Math.round(annualCampusKWh / 1000),
+        greenEnergyMWh: Math.max(0, Math.round((annualCampusKWh - totalEnergySavedKWh) / 1000)),
+        baselineWaterKL: Math.round(annualCampusWaterL / 1000),
+        greenWaterKL: Math.max(0, Math.round((annualCampusWaterL - totalWaterSavedL) / 1000)),
+        baselineWasteTons: Math.round(baselineWasteKg / 1000),
+        greenWasteTons: Math.max(0, Math.round((baselineWasteKg - wasteDivertedKg) / 1000))
+      };
+    }
+
+    const SLIDER_IDS = { sensors: 'slSensors', solar: 'slSolar', hvac: 'slHvac', aerators: 'slAerators', rain: 'slRain', waste: 'slWaste', plastic: 'slPlastic' };
+    function readSliders() {
+      const o = {};
+      Object.keys(SLIDER_IDS).forEach(k => { o[k] = Number($(SLIDER_IDS[k]).value) || 0; });
+      return o;
+    }
+
+    let lastSimOutput = null;
+
+    function calculateSimulation() {
+      const s = readSliders();
+      const set = (id, text, speech) => { $(id).textContent = text; if (speech) $(SLIDER_IDS[speech.key]).setAttribute('aria-valuetext', speech.text); };
+      set('valSensors', s.sensors + '%', { key: 'sensors', text: s.sensors + ' percent of classrooms' });
+      set('valSolar', s.solar + '%', { key: 'solar', text: s.solar + ' percent of usable roof' });
+      set('valHvac', '+' + s.hvac.toFixed(1) + '°C', { key: 'hvac', text: 'plus ' + s.hvac.toFixed(1) + ' degrees Celsius' });
+      set('valAerators', s.aerators + '%', { key: 'aerators', text: s.aerators + ' percent of taps' });
+      set('valRain', s.rain + '%', { key: 'rain', text: s.rain + ' percent of harvesting potential' });
+      set('valWaste', s.waste + '%', { key: 'waste', text: s.waste + ' percent of canteen food waste' });
+      set('valPlastic', s.plastic + '%', { key: 'plastic', text: s.plastic + ' percent plastic reduction' });
+
+      const r = simulate(s, campusConfig, campusBuildings);
+      lastSimOutput = r;
+      const paybackTxt = r.payback === null ? '0.00' : r.payback.toFixed(2);
+
+      // KPI ribbon
+      $('kpiCapex').textContent = formatINR(r.totalCapEx);
+      $('kpiSavings').innerHTML = formatINR(r.annualNetSavings) + ' <span class="text-xs text-slate-400 font-normal">/ yr</span>';
+      $('kpiPayback').innerHTML = paybackTxt + ' <span class="text-sm font-normal text-slate-400">Years</span>';
+      $('kpiCarbon').innerHTML = r.carbonTons.toLocaleString('en-IN') + ' <span class="text-sm font-normal text-slate-400">tCO₂e</span>';
+      $('kpiTrees').textContent = '~' + r.trees.toLocaleString('en-IN') + ' Trees Equivalent / yr';
+
+      const badge = $('kpiRatingBadge');
+      const cls = 'text-[10px] font-mono px-1.5 py-0.5 rounded border ';
+      if (r.payback === null) {
+        badge.textContent = '— No interventions selected';
+        badge.className = cls + 'bg-slate-800 text-slate-300 border-slate-700';
+      } else if (r.payback <= 1.5) {
+        badge.textContent = '⚡ Rapid Payback (< 1.5 yrs)';
+        badge.className = cls + 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20';
+      } else if (r.payback <= 3.5) {
+        badge.textContent = '👍 Strong ROI (1.5-3.5 yrs)';
+        badge.className = cls + 'bg-cyan-500/10 text-cyan-300 border-cyan-500/20';
+      } else {
+        badge.textContent = '⏳ Long-term Capital';
+        badge.className = cls + 'bg-amber-500/10 text-amber-300 border-amber-500/20';
+      }
+
+      // Before vs after bar
+      $('simBaselineBill').textContent = formatINR(r.annualBaselineBill);
+      $('simGreenBill').textContent = formatINR(r.annualGreenBill);
+      $('simNetSavings').textContent = formatINR(r.annualNetSavings) + ' / yr';
+      $('simPaybackNote').textContent = 'Demo Estimate • ' + (r.payback === null ? 'no payback (no savings)' : paybackTxt + ' Yrs Payback');
+
+      // Baseline source line (shows that telemetry is feeding the model)
+      const t = r.telemetry;
+      const src = $('simBaselineSource');
+      if (t.liveCount > 0) {
+        src.textContent = `Baseline adjusted by live telemetry from ${t.liveCount} of ${t.total} buildings: electricity ×${t.elecFactor.toFixed(2)}, water ×${t.waterFactor.toFixed(2)}` +
+          (t.capped ? ' (capped at 0.5x to 2x)' : '') + ' versus the monthly figures in College Details.';
+        src.className = 'text-[11px] font-mono text-cyan-300 bg-cyan-500/10 border border-cyan-500/30 rounded-lg px-3 py-2';
+      } else {
+        src.textContent = 'Baseline source: monthly figures from College Details only. Send live sensor packets (Live Sensor Test) and this baseline will follow them.';
+        src.className = 'text-[11px] font-mono text-slate-300 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2';
+      }
+
+      // Executive proposal
+      $('repCapex').textContent = formatINR(r.totalCapEx);
+      $('repSavings').textContent = formatINR(r.annualNetSavings);
+      $('repSavings2').textContent = formatINR(r.annualNetSavings);
+      $('repPayback').textContent = paybackTxt + ' years';
+      $('repPayback2').textContent = paybackTxt + ' Yrs';
+      $('repCarbon').textContent = r.carbonTons.toLocaleString('en-IN') + ' tCO₂e';
+      $('repTrees').textContent = r.trees.toLocaleString('en-IN') + ' mature trees';
+      $('repNpv').textContent = (r.npv5 >= 0 ? '+' : '') + formatINR(r.npv5);
+
+      updatePresetLabels();
+      scheduleCharts();
+    }
+
+    // Preset buttons show the payback the model really gives for that preset on THIS campus
+    function updatePresetLabels() {
+      document.querySelectorAll('[data-preset]').forEach(btn => {
+        const [sensors, hvac, solar, aerators, rain, waste, plastic] = btn.dataset.preset.split(',').map(Number);
+        const r = simulate({ sensors, hvac, solar, aerators, rain, waste, plastic }, campusConfig, campusBuildings);
+        const out = btn.querySelector('.preset-payback');
+        if (out) out.textContent = r.payback === null ? 'Payback: n/a' : 'Payback: ' + r.payback.toFixed(1) + ' Yrs';
+      });
+    }
+
+    function applyPreset(s, h, sol, aer, r, w, p) {
+      $('slSensors').value = s; $('slHvac').value = h; $('slSolar').value = sol; $('slAerators').value = aer;
+      $('slRain').value = r; $('slWaste').value = w; $('slPlastic').value = p;
+      calculateSimulation();
+    }
+    function resetSliders() { applyPreset(0, 0, 0, 0, 0, 0, 0); }
+
+    // =====================================================================
+    // Charts: created once, then updated in place (no rebuild per slider move)
+    // =====================================================================
+    let chart1 = null, chart2 = null, chartRaf = 0;
+    const MONTH_WEIGHTS = [0.92, 0.88, 0.96, 1.06, 1.20, 1.24, 1.16, 1.04, 0.98, 0.94, 0.89, 0.91];
+    const simulatorVisible = () => !$('tab-simulator').classList.contains('hidden');
+
+    function scheduleCharts() {
+      if (chartRaf) return;   // coalesce rapid slider events into one update per frame
+      chartRaf = requestAnimationFrame(() => { chartRaf = 0; updateCharts(); });
+    }
+
+    function updateCharts() {
+      if (!lastSimOutput || !simulatorVisible()) return;   // hidden canvases are updated when the tab is shown
+      const o = lastSimOutput;
+      const baseAvg = (o.annualBaselineBill / 12) / 100000;
+      const greenAvg = (o.annualGreenBill / 12) / 100000;
+      const baselineSeries = MONTH_WEIGHTS.map(w => Number((baseAvg * w).toFixed(2)));
+      const greenSeries = MONTH_WEIGHTS.map(w => Number((greenAvg * w).toFixed(2)));
+      const resBase = [o.baselineEnergyMWh, o.baselineWaterKL, o.baselineWasteTons];
+      const resGreen = [o.greenEnergyMWh, o.greenWaterKL, o.greenWasteTons];
+
+      if (window.Chart) {
+        const c1 = $('chartMonthly'), c2 = $('chartResources');
+        if (!chart1 && c1) {
+          chart1 = new Chart(c1, {
+            type: 'line',
+            data: {
+              labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+              datasets: [
+                { label: 'Baseline Run-Rate (₹ Lakhs)', data: baselineSeries, borderColor: '#f43f5e', tension: 0.3, borderWidth: 2.5, pointRadius: 2 },
+                { label: 'Simulated Green Twin (₹ Lakhs)', data: greenSeries, borderColor: '#10b981', tension: 0.3, borderWidth: 2.5, pointRadius: 2 }
+              ]
+            },
+            options: {
+              responsive: true, maintainAspectRatio: false,
+              animation: reducedMotion() ? false : { duration: 250 },
+              scales: {
+                y: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8', font: { size: 10, family: 'JetBrains Mono' }, callback: (v) => '₹' + v + 'L' } },
+                x: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8', font: { size: 10 } } }
+              },
+              plugins: {
+                legend: { labels: { color: '#cbd5e1', font: { size: 11 } } },
+                tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ₹ ${ctx.raw} Lakhs` } }
+              }
+            }
+          });
+        } else if (chart1) {
+          chart1.data.datasets[0].data = baselineSeries;
+          chart1.data.datasets[1].data = greenSeries;
+          chart1.update();
+        }
+        if (!chart2 && c2) {
+          chart2 = new Chart(c2, {
+            type: 'bar',
+            data: {
+              labels: ['Energy (MWh/yr)', 'Water (kL/yr)', 'Waste (Tons/yr)'],
+              datasets: [
+                { label: 'Current Baseline', data: resBase, backgroundColor: '#475569' },
+                { label: 'Simulated Green State', data: resGreen, backgroundColor: '#06b6d4' }
+              ]
+            },
+            options: {
+              responsive: true, maintainAspectRatio: false,
+              animation: reducedMotion() ? false : { duration: 250 },
+              scales: {
+                y: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8', font: { size: 10, family: 'JetBrains Mono' } } },
+                x: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8', font: { size: 10 } } }
+              },
+              plugins: { legend: { labels: { color: '#cbd5e1', font: { size: 11 } } } }
+            }
+          });
+        } else if (chart2) {
+          chart2.data.datasets[0].data = resBase;
+          chart2.data.datasets[1].data = resGreen;
+          chart2.update();
+        }
+      }
+
+      // Text alternative for the canvases (screen readers)
+      const summary1 = `Line chart of monthly utility spend in lakh rupees. Baseline averages ${baseAvg.toFixed(2)} lakh per month; with the simulated measures it averages ${greenAvg.toFixed(2)} lakh per month.`;
+      const summary2 = `Bar chart comparing baseline and simulated yearly use. Energy ${fmtNum(resBase[0])} to ${fmtNum(resGreen[0])} megawatt hours, water ${fmtNum(resBase[1])} to ${fmtNum(resGreen[1])} kilolitres, waste ${resBase[2]} to ${resGreen[2]} tons.`;
+      $('chartMonthly').setAttribute('aria-label', summary1);
+      $('chartResources').setAttribute('aria-label', summary2);
+      $('chartSummary').textContent = summary1 + ' ' + summary2;
+    }
+
+    // =====================================================================
+    // Twin view: map + cards. Built once per building set, then updated in place
+    // (so keyboard focus and hover are never lost when a live number changes).
+    // =====================================================================
+    function metricFor(b) {
+      if (currentLayer === 'energy') return { text: b.kw.toFixed(1) + ' kW', color: 'text-amber-400', fill: '#f59e0b', label: 'Live Draw', spoken: b.kw.toFixed(1) + ' kilowatts' };
+      if (currentLayer === 'water') return { text: b.water.toFixed(1) + ' LPM', color: 'text-cyan-400', fill: '#06b6d4', label: 'Water Flow', spoken: b.water.toFixed(1) + ' litres per minute' };
+      if (currentLayer === 'waste') return { text: b.waste + '% Fill', color: 'text-emerald-400', fill: '#10b981', label: 'Bin Level', spoken: b.waste + ' percent full' };
+      return { text: b.temp.toFixed(1) + '°C', color: 'text-rose-400', fill: '#f43f5e', label: 'Indoor Temp', spoken: b.temp.toFixed(1) + ' degrees Celsius' };
+    }
+
+    let builtSignature = '';
+
+    function renderMap() {
+      const svg = $('campusMap');
+      const blds = campusBuildings, n = blds.length;
+      const cols = n <= 3 ? n : n <= 6 ? 3 : n <= 12 ? 4 : 6;
+      const rows = Math.ceil(n / cols);
+      const dense = cols >= 6;
+      const padX = cols <= 3 ? 80 : 50, gapX = cols <= 3 ? 40 : 20;
+      const tileW = Math.min(220, (900 - 2 * padX - (cols - 1) * gapX) / cols);
+      const tileH = dense ? 64 : 75, gapY = dense ? 20 : 60, top = 35;
+      const totalW = cols * tileW + (cols - 1) * gapX;
+      const startX = (900 - totalW) / 2;
+      const H = top * 2 + rows * tileH + (rows - 1) * gapY;
+      const showName = tileW >= 150;
+      const maxChars = tileW >= 200 ? 24 : 16;
+
+      let walk = '';
+      for (let r = 1; r < rows; r++) { const y = top + r * tileH + (r - 0.5) * gapY; walk += `M 40 ${y} L 860 ${y} `; }
+      for (let c = 1; c < cols; c++) { const x = startX + c * tileW + (c - 0.5) * gapX; walk += `M ${x} 25 L ${x} ${H - 25} `; }
+
+      let html = `<defs><pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse"><path d="M 30 0 L 0 0 0 30" fill="none" stroke="#1e293b" stroke-width="0.5" stroke-opacity="0.4"></path></pattern></defs>
+        <rect width="900" height="${H}" fill="url(#grid)"></rect>`;
+      if (walk) html += `<path d="${walk}" stroke="#1e293b" stroke-width="20" stroke-linecap="round" opacity="0.6"></path><path d="${walk}" stroke="#080c14" stroke-width="12" stroke-linecap="round"></path>`;
+      if (rows === 2 && cols === 3) {
+        html += `<circle cx="450" cy="${H / 2}" r="32" fill="#064e3b" fill-opacity="0.25" stroke="#10b981" stroke-width="1" stroke-dasharray="2 2"></circle>
+          <text x="450" y="${H / 2 + 3}" fill="#34d399" font-size="9" font-family="JetBrains Mono" text-anchor="middle">CENTRAL QUAD</text>`;
+      }
+
+      blds.forEach((b, i) => {
+        const x = startX + (i % cols) * (tileW + gapX), y = top + Math.floor(i / cols) * (tileH + gapY);
+        const nm = b.short.length > maxChars ? b.short.slice(0, maxChars - 1) + '…' : b.short;
+        html += `<g class="campus-bldg-node" data-bid="${b.id}" role="button" tabindex="0" aria-label="${esc(b.name)}">
+          <rect x="${x}" y="${y}" width="${tileW}" height="${tileH}" rx="10" fill="#0f172a" stroke="#334155" stroke-width="1"></rect>
+          <rect x="${x + 10}" y="${y + 10}" width="${dense ? 56 : 50}" height="18" rx="4" fill="#1e293b"></rect>
+          <text x="${x + 10 + (dense ? 28 : 25)}" y="${y + 23}" fill="#e2e8f0" font-size="10" font-family="JetBrains Mono" font-weight="bold" text-anchor="middle">${esc(b.code)}</text>
+          ${showName ? `<text x="${x + 10}" y="${y + 45}" fill="#ffffff" font-size="12" font-family="Inter" font-weight="bold">${esc(nm)}</text>` : ''}
+          <text id="map-kw-${b.id}" x="${x + 10}" y="${y + (showName ? 63 : 52)}" fill="#f59e0b" font-size="11" font-family="JetBrains Mono" font-weight="bold"></text>
+          <g id="map-warn-${b.id}" style="visibility:hidden"><circle cx="${x + tileW - 15}" cy="${y + 15}" r="6" fill="#f43f5e" class="animate-pulse"></circle>
+            <text x="${x + tileW - 15}" y="${y + 18}" fill="#ffffff" font-size="8" text-anchor="middle" font-weight="bold">!</text></g>
+        </g>`;
+      });
+      svg.setAttribute('viewBox', `0 0 900 ${H}`);
+      svg.innerHTML = html;
+    }
+
+    function renderCards() {
+      $('buildingsGrid').innerHTML = campusBuildings.map(b => `
+        <div class="glass-card p-4 rounded-xl cursor-pointer transition-all flex flex-col justify-between hover:border-emerald-500" data-bid="${b.id}" role="button" tabindex="0">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center space-x-1.5">
+                <span class="px-1.5 py-0.5 rounded text-[10px] font-mono bg-slate-800 text-slate-300 font-bold">${esc(b.code)}</span>
+                <span class="js-badge hidden px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 animate-pulse">LIVE PACKET</span>
+              </div>
+              <div class="text-right">
+                <span class="js-label text-[10px] text-slate-500 uppercase mr-1"></span>
+                <span class="js-metric text-xs font-mono font-bold"></span>
+              </div>
+            </div>
+            <h4 class="text-sm font-bold text-white truncate">${esc(b.name)}</h4>
+            <p class="js-alert text-[11px] text-slate-400 mt-1 line-clamp-2 leading-relaxed"></p>
+            ${roomChipsHtml(b)}
+          </div>
+          <div class="mt-3 pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-500 font-mono">
+            <span>${fmtArea(b.areaSqFt)}</span>
+            <span>Roof: ${fmtArea(b.roofSqFt)}</span>
+          </div>
+        </div>`).join('');
+    }
+
+    function refreshBuildingViews() {
+      const sig = campusBuildings.map(b => [b.id, b.code, b.areaSqFt, b.roofSqFt, b.name, b.floors, Object.values(floorTotals(b.floorPlan)).join(',')].join(':')).join('|');
+      if (sig !== builtSignature) { renderMap(); renderCards(); builtSignature = sig; }
+      const liveCls = ['border-cyan-400', 'glow-cyan', 'ring-1', 'ring-cyan-400'];
+      campusBuildings.forEach(b => {
+        const m = metricFor(b);
+        const node = $('map-kw-' + b.id);
+        if (node) { node.textContent = m.text; node.setAttribute('fill', m.fill); }
+        const warn = $('map-warn-' + b.id);
+        if (warn) warn.style.visibility = b.warn ? 'visible' : 'hidden';
+        const g = document.querySelector(`#campusMap [data-bid="${b.id}"]`);
+        if (g) g.setAttribute('aria-label', `${b.name}, ${m.label} ${m.spoken}${b.warn ? ', alert' : ''}${b.isLive ? ', live reading' : ''}. Press Enter for details.`);
+        const card = document.querySelector(`#buildingsGrid [data-bid="${b.id}"]`);
+        if (card) {
+          const metric = card.querySelector('.js-metric');
+          metric.textContent = m.text;
+          metric.className = 'js-metric text-xs font-mono font-bold ' + m.color;
+          card.querySelector('.js-label').textContent = m.label + ':';
+          card.querySelector('.js-alert').textContent = b.alert;
+          card.querySelector('.js-badge').classList.toggle('hidden', !b.isLive);
+          liveCls.forEach(c => card.classList.toggle(c, b.isLive));
+          card.classList.toggle('hover:border-emerald-500', !b.isLive);
+          card.setAttribute('aria-label', `${b.name}. ${m.label} ${m.spoken}.${b.isLive ? ' Live reading.' : ''} Press Enter for details.`);
+        }
+      });
+      $('facilityCountBadge').textContent = campusBuildings.length + ' Monitored ' + (campusBuildings.length === 1 ? 'Facility' : 'Facilities');
+      $('grossAreaText').textContent = fmtNum(campusConfig.areaSqFt) + ' sq.ft';
+    }
+    const renderBuildings = refreshBuildingViews;
+
+    function populateBuildingSelect() {
+      const sel = $('simBldg');
+      const prev = sel.value || currentSelectedFacility;
+      sel.innerHTML = campusBuildings.map(b => `<option value="${b.id}">${esc(b.code)} (${esc(b.short)})</option>`).join('');
+      sel.value = findB(prev) ? prev : campusBuildings[0].id;
+    }
+
+    // Header meters: always the sum of what the buildings currently show
+    function updateTopMeters() {
+      const kw = campusBuildings.reduce((t, b) => t + b.kw, 0);
+      const lpm = campusBuildings.reduce((t, b) => t + b.water, 0);
+      $('topKw').textContent = kw.toFixed(1) + ' kW';
+      $('topLpm').textContent = lpm.toFixed(1) + ' LPM';
+    }
+
+    function updateTelemetryBadge() {
+      const live = campusBuildings.filter(b => b.isLive).length;
+      const badge = $('telemetryModeBadge'), dot = $('telemetryDot'), label = $('telemetryLabel');
+      if (live > 0) {
+        badge.className = 'hidden lg:flex items-center space-x-1.5 text-xs font-mono px-2.5 py-1 rounded-lg bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 shadow-md shadow-cyan-500/10';
+        dot.className = 'w-2 h-2 rounded-full bg-cyan-400 animate-ping';
+        label.textContent = `Live Ingest: ${live}/${campusBuildings.length} buildings`;
+      } else {
+        badge.className = 'hidden lg:flex items-center space-x-1.5 text-xs font-mono px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-300';
+        dot.className = 'w-2 h-2 rounded-full bg-amber-400 animate-pulse';
+        label.textContent = 'Demo Telemetry (Simulated)';
+      }
+    }
+
+    function afterTelemetryChange() {
+      refreshBuildingViews();
+      updateTopMeters();
+      updateTelemetryBadge();
+      calculateSimulation();
+    }
+
+    function renderCampusMeta() {
+      const c = campusConfig;
+      $('activeCollegeTitle').textContent = c.name;
+      $('activeCollegeMeta').textContent = `• ${fmtNum(c.areaSqFt)} sq.ft • ${campusBuildings.length} Monitored Buildings • Tariff: ₹${c.rateElec.toFixed(2)}/kWh`;
+      $('repCollegeName').textContent = 'Prepared for: Principal / Dean of ' + c.name;
+    }
+
+    function setLayer(layer) {
+      currentLayer = layer;
+      ['energy', 'water', 'waste', 'thermal'].forEach(l => {
+        const btn = $('btn-layer-' + l);
+        const on = l === layer;
+        btn.className = on ? 'px-3 py-1.5 rounded-lg font-bold bg-amber-500/20 text-amber-400 border border-amber-500/40' : 'px-3 py-1.5 rounded-lg text-slate-400 hover:text-white';
+        btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
+      refreshBuildingViews();
+    }
+
+    // =====================================================================
+    // Navigation (tabs) + modals, with keyboard and screen-reader support
+    // =====================================================================
+    const TABS = ['customizer', 'twin', 'simulator', 'connect'];
+    const TAB_NAMES = { customizer: '1. College Details', twin: '2. Digital Twin', simulator: '3. What-If Simulator and Bill', connect: '4. Live Sensor Test' };
+    const ACTIVE_NAV = 'px-3 py-1.5 rounded-lg transition-all bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-bold';
+    const ACTIVE_NAV_CONNECT = 'px-3 py-1.5 rounded-lg transition-all bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-bold';
+    const IDLE_NAV = 'px-3 py-1.5 rounded-lg transition-all text-slate-400 hover:text-white';
+
+    // ---- Page-change transition -------------------------------------------------
+    // The header strip (demo flow, campus strip, KPI cards) is shared by every page. On a page change it
+    // slides out to the side together with the old page, then the new page and the header slide in from the
+    // other side (forward = leave left / enter right, backward = the reverse), KPI cards staggered.
+    let visibleTab = 'twin', pendingSwap = null, pendingTimer = null, tabAnims = [];
+    const TAB_OUT_MS = 220, TAB_IN_MS = 440, TAB_EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
+
+    function setNavState(tab) {
+      syncChrome(tab);
+      TABS.forEach(t => {
+        const nav = $('nav-' + t);
+        if (nav) { nav.className = IDLE_NAV; nav.setAttribute('aria-selected', 'false'); nav.tabIndex = -1; }
+        const mob = $('mob-' + t);
+        if (mob) { mob.className = 'text-slate-400'; mob.removeAttribute('aria-current'); }
+        const flow = $('flow-' + t);
+        if (flow) { flow.classList.remove('flow-active'); flow.removeAttribute('aria-current'); }
+      });
+      const nav = $('nav-' + tab);
+      if (nav) { nav.className = tab === 'connect' ? ACTIVE_NAV_CONNECT : ACTIVE_NAV; nav.setAttribute('aria-selected', 'true'); nav.tabIndex = 0; }
+      const mob = $('mob-' + tab);
+      if (mob) { mob.className = 'text-emerald-400 font-bold'; mob.setAttribute('aria-current', 'page'); }
+      const flow = $('flow-' + tab);
+      if (flow) { flow.classList.add('flow-active'); flow.setAttribute('aria-current', 'step'); }
+    }
+    function showPanel(tab) {
+      TABS.forEach(t => $('tab-' + t).classList.toggle('hidden', t !== tab));
+      visibleTab = tab;
+      if (tab === 'simulator') {
+        updateCharts();
+        if (chart1) chart1.resize();
+        if (chart2) chart2.resize();
+      }
+    }
+    function stopTabAnims() {
+      tabAnims.forEach(a => { try { a.cancel(); } catch (e) { /* already finished */ } });
+      tabAnims = [];
+    }
+    function slide(el, from, to, opts) {
+      if (!el || !el.animate) return;
+      tabAnims.push(el.animate([from, to], opts));
+    }
+
+    function switchTab(tab, opts = {}) {
+      if (!opts.auto && demoActive) stopAutoDemo();   // the user took over: stop the scripted demo
+      if (pendingSwap) { clearTimeout(pendingTimer); const done = pendingSwap; pendingSwap = null; done(); }   // finish an unfinished change first
+      stopTabAnims();
+      setNavState(tab);
+      const from = visibleTab;
+      window.scrollTo({ top: 0, behavior: reducedMotion() ? 'auto' : 'smooth' });
+      announce('Showing ' + TAB_NAMES[tab]);
+      if (tab === from) return;
+
+      const hdr = $('sharedHeader'), outgoing = $('tab-' + from), incoming = $('tab-' + tab);
+      if (reducedMotion() || !hdr || !hdr.animate) { showPanel(tab); return; }
+
+      const dir = TABS.indexOf(tab) > TABS.indexOf(from) ? 1 : -1;   // 1 = forward
+      const cards = [...document.querySelectorAll('#kpiRibbon > div')];
+      // 1. header and old page move out to the side
+      slide(hdr, { transform: 'translateX(0)', opacity: 1 }, { transform: `translateX(${-dir * 80}px)`, opacity: 0 }, { duration: TAB_OUT_MS, easing: 'ease-in', fill: 'forwards' });
+      slide(outgoing, { transform: 'translateX(0)', opacity: 1 }, { transform: `translateX(${-dir * 60}px)`, opacity: 0 }, { duration: TAB_OUT_MS, easing: 'ease-in', fill: 'forwards' });
+      // 2. swap the page, then header and new page come in from the other side
+      pendingSwap = () => {
+        stopTabAnims();
+        showPanel(tab);
+        slide(incoming, { transform: `translateX(${dir * 60}px)`, opacity: 0 }, { transform: 'translateX(0)', opacity: 1 }, { duration: TAB_IN_MS, easing: TAB_EASE });
+        slide(hdr, { transform: `translateX(${dir * 80}px)`, opacity: 0 }, { transform: 'translateX(0)', opacity: 1 }, { duration: TAB_IN_MS, easing: TAB_EASE });
+        cards.forEach((c, i) => slide(c, { transform: `translateX(${dir * 40}px)`, opacity: 0 }, { transform: 'translateX(0)', opacity: 1 }, { duration: TAB_IN_MS, delay: 60 + i * 55, easing: TAB_EASE, fill: 'backwards' }));
+      };
+      pendingTimer = setTimeout(() => { const done = pendingSwap; pendingSwap = null; if (done) done(); }, TAB_OUT_MS);
+    }
+
+    $('mainTablist').addEventListener('keydown', (e) => {
+      const i = TABS.findIndex(t => $('nav-' + t) === document.activeElement);
+      if (i < 0) return;
+      let j = null;
+      if (e.key === 'ArrowRight') j = (i + 1) % TABS.length;
+      else if (e.key === 'ArrowLeft') j = (i - 1 + TABS.length) % TABS.length;
+      else if (e.key === 'Home') j = 0;
+      else if (e.key === 'End') j = TABS.length - 1;
+      if (j === null) return;
+      e.preventDefault();
+      switchTab(TABS[j]);
+      $('nav-' + TABS[j]).focus();
+    });
+
+    // Modal helpers: focus moves in, Tab is trapped, Escape closes, focus returns to the opener
+    let modalOpener = null;
+    function openModal(id) {
+      const m = $(id);
+      modalOpener = document.activeElement;
+      m.classList.remove('hidden'); m.classList.add('flex');
+      const first = m.querySelector('[data-autofocus]') || m.querySelector('button');
+      if (first) first.focus();
+    }
+    function closeModal(id) {
+      const m = $(id);
+      m.classList.add('hidden'); m.classList.remove('flex');
+      if (modalOpener && document.contains(modalOpener) && typeof modalOpener.focus === 'function') modalOpener.focus();
+      modalOpener = null;
+    }
+    const openModalEl = () => ['facilityModal', 'reportModal'].map($).find(m => !m.classList.contains('hidden'));
+    document.addEventListener('keydown', (e) => {
+      const m = openModalEl();
+      if (!m) return;
+      if (e.key === 'Escape') { closeModal(m.id); return; }
+      if (e.key !== 'Tab') return;
+      const f = [...m.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')].filter(el => !el.disabled && el.offsetParent !== null);
+      if (!f.length) return;
+      const first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    });
+    ['facilityModal', 'reportModal'].forEach(id => $(id).addEventListener('click', (e) => { if (e.target === $(id)) closeModal(id); }));
+
+    function openFacilityModal(ref) {
+      const b = typeof ref === 'string' ? findB(ref) : ref;
+      if (!b) return;
+      currentSelectedFacility = b.id;
+      $('facCode').textContent = b.code;
+      $('facTitle').textContent = b.name;
+      $('facArea').textContent = fmtArea(b.areaSqFt);
+      $('facRoof').textContent = fmtArea(b.roofSqFt);
+      $('facCapacity').textContent = b.capacity.toLocaleString('en-IN');
+      $('facKw').textContent = b.kw.toFixed(1) + ' kW';
+      $('facWater').textContent = b.water.toFixed(1) + ' LPM';
+      $('facTemp').textContent = b.temp.toFixed(1) + '°C';
+      $('facWaste').textContent = b.waste + '%';
+      const plan = b.floorPlan || [], tot = floorTotals(plan);
+      $('facFloorCount').textContent = b.floors + (b.floors === 1 ? ' floor' : ' floors');
+      $('facTotClassrooms').textContent = tot.classrooms;
+      $('facTotDeptRooms').textContent = tot.deptRooms;
+      $('facTotWashrooms').textContent = tot.washrooms;
+      $('facTotLabs').textContent = tot.labs;
+      $('facFloorRows').innerHTML = plan.map((r, i) => ({ r, i })).reverse().map(({ r, i }) =>
+        `<tr class="border-t border-slate-800"><th scope="row" class="px-2 py-1 text-left text-slate-300 font-semibold whitespace-nowrap">${floorName(i)}</th>` +
+        `<td class="px-2 py-1 text-center">${r.classrooms}</td><td class="px-2 py-1 text-center">${r.deptRooms}</td><td class="px-2 py-1 text-center">${r.washrooms}</td><td class="px-2 py-1 text-center">${r.labs}</td></tr>`).join('');
+      $('facAlert').textContent = b.alert;
+      const tag = $('facTelemetryTag');
+      if (b.isLive) { tag.textContent = '● Live Ingested Feed'; tag.className = 'text-cyan-400 font-mono font-bold'; }
+      else { tag.textContent = '● Demo Simulated'; tag.className = 'text-emerald-400 font-mono'; }
+      openModal('facilityModal');
+    }
+    const closeFacilityModal = () => closeModal('facilityModal');
+    function inspectFacilityInSensorTest() {
+      const id = currentSelectedFacility;
+      closeModal('facilityModal');
+      switchTab('connect');
+      $('simBldg').value = id;
+    }
+    function openReportModal() {
+      $('repDate').textContent = 'Prepared: ' + new Date().toLocaleDateString('en-IN');
+      openModal('reportModal');
+    }
+    const closeReportModal = () => closeModal('reportModal');
+
+    // Map + card activation (click, Enter, Space)
+    function bindActivation(container) {
+      container.addEventListener('click', (e) => { const t = e.target.closest('[data-bid]'); if (t) openFacilityModal(t.dataset.bid); });
+      container.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        const t = e.target.closest('[data-bid]');
+        if (t && t === e.target) { e.preventDefault(); openFacilityModal(t.dataset.bid); }
+      });
+    }
+    bindActivation($('campusMap'));
+    bindActivation($('buildingsGrid'));
+
+    // =====================================================================
+    // College details form: validation, area units, save
+    // =====================================================================
+    function setAreaUnit(unit) {
+      currentAreaUnit = unit;
+      ['sqft', 'acres', 'sqm'].forEach(u => {
+        const btn = $('unit-' + u);
+        if (!btn) return;
+        btn.className = u === unit ? 'px-1.5 py-0.5 rounded bg-slate-800 text-emerald-400 font-bold' : 'px-1.5 py-0.5 rounded text-slate-400 hover:text-white';
+        btn.setAttribute('aria-pressed', u === unit ? 'true' : 'false');
+      });
+      const label = $('cfgAreaUnitLabel'), input = $('cfgArea');
+      if (unit === 'acres') { label.textContent = 'Acres'; input.value = (campusConfig.areaSqFt / 43560).toFixed(2); }
+      else if (unit === 'sqm') { label.textContent = 'm²'; input.value = Math.round(campusConfig.areaSqFt / 10.764); }
+      else { label.textContent = 'sq.ft'; input.value = Math.round(campusConfig.areaSqFt); }
+      updateAreaEquivText();
+    }
+    function onAreaInputChange() {
+      const val = Number($('cfgArea').value) || 0;
+      campusConfig.areaSqFt = currentAreaUnit === 'acres' ? val * 43560 : currentAreaUnit === 'sqm' ? val * 10.764 : val;
+      updateAreaEquivText();
+      updateLiveCollegeBaseline();
+    }
+    function updateAreaEquivText() {
+      const sqft = campusConfig.areaSqFt;
+      $('areaEquivText').textContent = `≈ ${(sqft / 43560).toFixed(2)} Acres • ${Math.round(sqft / 10.764).toLocaleString('en-IN')} m² (${Math.round(sqft).toLocaleString('en-IN')} sq.ft)`;
+    }
+    function updateLiveCollegeBaseline() {
+      const rateElec = Number($('cfgRateElec').value) || 0, monthlyKWh = Number($('cfgMonthlyKWh').value) || 0;
+      const rateWater = Number($('cfgRateWater').value) || 0, monthlyWaterKL = Number($('cfgMonthlyWaterKL').value) || 0;
+      const e = monthlyKWh * rateElec, w = monthlyWaterKL * rateWater;
+      $('previewElecBill').textContent = formatINR(e);
+      $('previewWaterBill').textContent = formatINR(w);
+      $('previewAnnualBill').textContent = formatINR((e + w) * 12) + ' / yr';
+      if (facilityDraft) updateFacilitySummary();
+    }
+
+    // =====================================================================
+    // Buildings & facilities editor (custom list overrides the auto-generated sample buildings)
+    // =====================================================================
+    let facilityDraft = null;   // null = auto mode; array = list being edited (applied on Save)
+
+    function facilityFromBuilding(b) {
+      return { id: b.id, code: b.code, name: b.name, type: b.type || CODE_PREFIX_TYPE[b.code.split('-')[0]] || 'other',
+        areaSqFt: b.areaSqFt, roofSqFt: b.roofSqFt, capacity: b.capacity, kw: b.kwNom, water: b.waterNom,
+        temp: b.tempNom, waste: b.waste, alert: b.alertNom, warn: b.warnNom,
+        floors: b.floors, floorPlan: (b.floorPlan || []).map(r => ({ ...r })) };
+    }
+    function startCustomFacilities() {
+      facilityDraft = campusBuildings.map(facilityFromBuilding);
+      renderFacilityEditor();
+      announce('Building list is now editable. Press Save and Update Digital Twin to apply changes.');
+      const first = document.getElementById('fac-' + facilityDraft[0].id + '-name');
+      if (first) first.focus();
+    }
+    function resetToAutoFacilities() {
+      facilityDraft = null;
+      renderFacilityEditor();
+      announce('Buildings will be auto-generated from the count. Press Save to apply.');
+    }
+    function addFacilityRow() {
+      if (!facilityDraft) facilityDraft = campusBuildings.map(facilityFromBuilding);
+      if (facilityDraft.length >= MAX_BUILDINGS) { showToast('Up to ' + MAX_BUILDINGS + ' buildings are supported.', 'warn'); return; }
+      const maxNum = facilityDraft.reduce((m, f) => Math.max(m, parseInt(f.id.slice(1), 10) || 0), 0);
+      if (maxNum + 1 > 999) { showToast('Building ids are exhausted (b1 to b999).', 'warn'); return; }
+      const id = 'b' + (maxNum + 1);
+      facilityDraft.push({ id, code: null, name: 'New building ' + (maxNum + 1), type: 'academic',
+        areaSqFt: 20000, roofSqFt: 10000, capacity: 300, kw: 10, water: 2, temp: 25, waste: 50, alert: null, warn: false,
+        floors: 3, floorPlan: defaultFloorPlan('academic', 3) });
+      renderFacilityEditor();
+      const el = document.getElementById('fac-' + id + '-name');
+      if (el) { el.focus(); el.select(); }
+    }
+    function removeFacility(id) {
+      if (!facilityDraft) return;
+      if (facilityDraft.length <= 1) { showToast('Keep at least one building.', 'warn'); return; }
+      facilityDraft = facilityDraft.filter(f => f.id !== id);
+      renderFacilityEditor();
+      announce('Building removed. Press Save to apply.');
+    }
+    function onFacilityInput(id, key, val) {
+      const f = facilityDraft && facilityDraft.find(x => x.id === id);
+      if (!f) return;
+      f[key] = val;
+      if (key === 'type') f.code = null;   // code follows the type again
+      updateFacilitySummary();
+    }
+    // ---- Floors & rooms editor (one collapsible table per building) ----
+    const openFloorPanels = new Set();
+    function floorSummaryText(f) {
+      const n = Number(f.floors), t = floorTotals(f.floorPlan);
+      const ok = f.floors !== '' && Number.isInteger(n);
+      return `${ok ? n : '?'} ${n === 1 ? 'floor' : 'floors'} · ${t.classrooms} classrooms · ${t.deptRooms} dept. rooms · ${t.washrooms} washrooms · ${t.labs} labs`;
+    }
+    function floorBodyHtml(f) {
+      const plan = f.floorPlan || [];
+      if (!plan.length) return `<p class="text-xs text-amber-300 mt-2">Enter a valid number of floors (1 to ${MAX_FLOORS}) to edit the rooms floor by floor.</p>`;
+      const head = ROOM_KEYS.map(k => `<th class="px-2 py-1 text-left font-semibold text-slate-400">${k.icon} ${k.label}</th>`).join('');
+      const rows = plan.map((r, i) => `<tr class="border-t border-slate-800"><th scope="row" class="px-2 py-1 text-left font-semibold text-slate-300 whitespace-nowrap">${floorName(i)}</th>` +
+        ROOM_KEYS.map(k => `<td class="px-1 py-1"><input id="fac-${f.id}-fl${i}-${k.key}" type="number" min="0" max="${MAX_ROOMS}" step="1" value="${esc(r[k.key] ?? '')}" aria-label="${esc((f.name || f.id) + ', ' + floorName(i) + ', ' + k.label)}" oninput="onFloorRoomInput('${f.id}',${i},'${k.key}',this.value)" class="w-20 p-1.5 rounded bg-slate-950 border border-slate-800 text-sm text-white font-mono focus:border-emerald-500 outline-none"></td>`).join('') + '</tr>').join('');
+      return `<div class="overflow-x-auto mt-2"><table class="text-xs"><thead><tr><th class="px-2 py-1 text-left text-slate-400 font-semibold">Floor</th>${head}</tr></thead><tbody>${rows}</tbody></table></div>` +
+        (plan.length > 1 ? `<button type="button" onclick="copyFloorToAll('${f.id}'); uiOk('Floor settings copied to every building.')" class="mt-2 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] font-semibold text-slate-300 border border-slate-700">Copy ground floor to all floors</button>` : '');
+    }
+    function floorPanelHtml(f) {
+      return `<details class="rounded-lg bg-slate-950/60 border border-slate-800 px-3 py-2" ${openFloorPanels.has(f.id) ? 'open' : ''} ontoggle="onFloorToggle('${f.id}',this.open)">
+        <summary class="cursor-pointer text-xs font-semibold text-emerald-300">🏢 Floors &amp; rooms per floor: <span id="fac-${f.id}-floorsum" class="text-slate-300 font-normal">${esc(floorSummaryText(f))}</span></summary>
+        <div id="fac-${f.id}-floorbody">${floorBodyHtml(f)}</div></details>`;
+    }
+    const draftById = (id) => facilityDraft && facilityDraft.find(x => x.id === id);
+    function onFloorToggle(id, open) { if (open) openFloorPanels.add(id); else openFloorPanels.delete(id); }
+    function refreshFloorSummary(f) { const el = $(`fac-${f.id}-floorsum`); if (el) el.textContent = floorSummaryText(f); }
+    function onFloorsInput(id, val) {
+      const f = draftById(id);
+      if (!f) return;
+      const n = Number(val);
+      f.floors = val;
+      if (val !== '' && Number.isInteger(n) && n >= 1 && n <= MAX_FLOORS) {
+        // remember the longest plan so typing "12" over "5" does not lose floors 2 to 5
+        if (!f._stash || f._stash.length < f.floorPlan.length) f._stash = f.floorPlan.map(r => ({ ...r }));
+        f.floorPlan = resizeFloorPlan(f.floorPlan, n, FACILITY_TYPES[f.type] ? f.type : 'other', f._stash);
+        const body = $(`fac-${id}-floorbody`);
+        if (body) body.innerHTML = floorBodyHtml(f);
+      }
+      refreshFloorSummary(f);
+      updateFacilitySummary();
+    }
+    function onFloorRoomInput(id, i, key, val) {
+      const f = draftById(id);
+      if (!f || !f.floorPlan[i]) return;
+      f.floorPlan[i][key] = val;
+      refreshFloorSummary(f);
+      updateFacilitySummary();
+    }
+    function copyFloorToAll(id) {
+      const f = draftById(id);
+      if (!f || !f.floorPlan.length) return;
+      const first = f.floorPlan[0];
+      f.floorPlan = f.floorPlan.map(() => ({ ...first }));
+      $(`fac-${id}-floorbody`).innerHTML = floorBodyHtml(f);
+      refreshFloorSummary(f);
+      updateFacilitySummary();
+      announce('Ground floor rooms copied to every floor.');
+    }
+
+    function facilityRowHtml(f) {
+      normalizeFloorData(f);
+      const input = (key, label, type, extra) => `<div><label for="fac-${f.id}-${key}" class="block text-xs text-slate-400 mb-1">${label}</label>
+        <input id="fac-${f.id}-${key}" type="${type}" value="${esc(f[key] ?? '')}" ${extra || ''} oninput="onFacilityInput('${f.id}','${key}',this.value)"
+          class="w-full p-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-white ${type === 'number' ? 'font-mono' : ''} focus:border-emerald-500 outline-none"></div>`;
+      const opts = Object.entries(FACILITY_TYPES).map(([k, v]) => `<option value="${k}" ${k === f.type ? 'selected' : ''}>${esc(v[0])}</option>`).join('');
+      return `<div class="grid grid-cols-2 md:grid-cols-10 gap-2 items-end p-3 rounded-lg bg-slate-900/60 border border-slate-800" data-fid="${f.id}">
+        <div class="col-span-2">${input('name', 'Name (' + esc(f.id.toUpperCase()) + ')', 'text', 'maxlength="60"')}</div>
+        <div><label for="fac-${f.id}-type" class="block text-xs text-slate-400 mb-1">Type</label>
+          <select id="fac-${f.id}-type" onchange="onFacilityInput('${f.id}','type',this.value)" class="w-full p-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-white focus:border-emerald-500 outline-none">${opts}</select></div>
+        ${input('areaSqFt', 'Floor area (sq.ft)', 'number', 'min="100" step="100"')}
+        ${input('roofSqFt', 'Roof area (sq.ft)', 'number', 'min="0" step="100"')}
+        ${input('capacity', 'Capacity (people)', 'number', 'min="0" step="1"')}
+        ${input('kw', 'Avg load (kW)', 'number', 'min="0" step="0.1"')}
+        ${input('water', 'Water (LPM)', 'number', 'min="0" step="0.1"')}
+        <div><label for="fac-${f.id}-floors" class="block text-xs text-slate-400 mb-1">Floors (incl. ground)</label>
+          <input id="fac-${f.id}-floors" type="number" min="1" max="${MAX_FLOORS}" step="1" value="${esc(f.floors ?? '')}" oninput="onFloorsInput('${f.id}',this.value)"
+            class="w-full p-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-white font-mono focus:border-emerald-500 outline-none"></div>
+        <div class="col-span-2 md:col-span-1"><button type="button" onclick="removeFacility('${f.id}')" aria-label="Remove ${esc(f.name || f.id)}"
+          class="w-full p-2 rounded-lg bg-rose-950/40 hover:bg-rose-900/50 text-xs font-semibold text-rose-300 border border-rose-500/30">Remove</button></div>
+        <div class="col-span-2 md:col-span-10">${floorPanelHtml(f)}</div>
+      </div>`;
+    }
+    function renderFacilityEditor() {
+      const editing = !!facilityDraft;
+      $('facEditor').classList.toggle('hidden', !editing);
+      $('btnFacCustomize').classList.toggle('hidden', editing);
+      $('btnFacAdd').classList.toggle('hidden', !editing);
+      $('btnFacAuto').classList.toggle('hidden', !editing);
+      const cnt = $('cfgBuildings');
+      cnt.readOnly = editing;
+      cnt.classList.toggle('opacity-60', editing);
+      $('facModeText').textContent = editing
+        ? 'Enter each real building or facility. The building count follows this list. Press Save & Update Digital Twin to apply.'
+        : 'Auto mode: sample buildings are generated from the count above. Choose "Enter my own buildings" to list your real ones with their areas, loads and capacity.';
+      if (!editing) return;
+      cnt.value = facilityDraft.length;
+      $('facRows').innerHTML = facilityDraft.map(facilityRowHtml).join('');
+      updateFacilitySummary();
+    }
+    function updateFacilitySummary() {
+      if (!facilityDraft) return;
+      $('cfgBuildings').value = facilityDraft.length;
+      const n = (v) => Number(v) || 0;
+      const sum = (k) => facilityDraft.reduce((t, f) => t + n(f[k]), 0);
+      const roomSum = floorTotals(facilityDraft.flatMap(f => f.floorPlan || []));
+      const kwhIn = n($('cfgMonthlyKWh').value), klIn = n($('cfgMonthlyWaterKL').value);
+      const expKw = kwhIn / HOURS_PER_MONTH, expLpm = (klIn * 1000) / (HOURS_PER_MONTH * 60);
+      const off = (got, exp) => exp > 0 && Math.abs(got - exp) / exp > 0.15;
+      const warnCls = 'text-amber-300', okCls = 'text-emerald-300';
+      const kwBad = off(sum('kw'), expKw), lpmBad = off(sum('water'), expLpm);
+      const line = (txt, bad) => `<div class="${bad ? warnCls : okCls}">${bad ? '⚠ ' : '✓ '}${esc(txt)}</div>`;
+      $('facSummary').innerHTML =
+        `<div class="text-slate-300">${facilityDraft.length} ${facilityDraft.length === 1 ? 'building' : 'buildings'} • floor area ${fmtNum(sum('areaSqFt'))} sq.ft (campus plot ${fmtNum(campusConfig.areaSqFt)} sq.ft) • roof ${fmtNum(sum('roofSqFt'))} sq.ft • capacity ${fmtNum(sum('capacity'))}</div>` +
+        `<div class="text-slate-300">${fmtNum(sum('floors'))} floors in total • ${fmtNum(roomSum.classrooms)} classrooms • ${fmtNum(roomSum.deptRooms)} department rooms • ${fmtNum(roomSum.washrooms)} washrooms • ${fmtNum(roomSum.labs)} labs</div>` +
+        line(`Average load ${sum('kw').toFixed(1)} kW vs ${expKw.toFixed(1)} kW implied by ${fmtNum(kwhIn)} kWh/month`, kwBad) +
+        line(`Water flow ${sum('water').toFixed(1)} LPM vs ${expLpm.toFixed(1)} LPM implied by ${fmtNum(klIn)} kL/month`, lpmBad);
+      $('btnFacScale').classList.toggle('hidden', !(kwBad || lpmBad));
+    }
+    function scaleFacilityLoads() {
+      if (!facilityDraft) return;
+      const n = (v) => Number(v) || 0;
+      const totKw = facilityDraft.reduce((t, f) => t + n(f.kw), 0), totW = facilityDraft.reduce((t, f) => t + n(f.water), 0);
+      const expKw = n($('cfgMonthlyKWh').value) / HOURS_PER_MONTH;
+      const expLpm = (n($('cfgMonthlyWaterKL').value) * 1000) / (HOURS_PER_MONTH * 60);
+      facilityDraft.forEach(f => {
+        if (totKw > 0) f.kw = round1(n(f.kw) * expKw / totKw);
+        if (totW > 0) f.water = round1(n(f.water) * expLpm / totW);
+      });
+      renderFacilityEditor();
+      showToast('Building loads scaled to match the monthly kWh and kL above.');
+    }
+
+    // Validation shared by Save and by restoring a saved setup
+    function readFacilities() {
+      const errors = [], list = [];
+      facilityDraft.forEach((f, i) => {
+        normalizeFloorData(f);
+        const name = String(f.name ?? '').trim();
+        const label = name ? `"${name}"` : `Building ${i + 1}`;
+        const fid = (k) => `fac-${f.id}-${k}`;
+        const chk = (key, min, max, int, what) => {
+          const raw = String(f[key] ?? '').trim(), v = Number(raw);
+          if (raw === '' || !Number.isFinite(v) || v < min || v > max || (int && !Number.isInteger(v))) {
+            errors.push({ id: fid(key), msg: `${label}: ${what} must be ${int ? 'a whole number' : 'a number'} between ${fmtNum(min)} and ${fmtNum(max)}.` });
+            return null;
+          }
+          return v;
+        };
+        if (!name || name.length > 60) errors.push({ id: fid('name'), msg: `${label}: enter a name (up to 60 characters).` });
+        const areaSqFt = chk('areaSqFt', 100, 1e7, false, 'floor area');
+        const roofSqFt = chk('roofSqFt', 0, 1e7, false, 'roof area');
+        const capacity = chk('capacity', 0, 1e5, true, 'capacity');
+        const kw = chk('kw', 0, 1e5, false, 'average load (kW)');
+        const water = chk('water', 0, 1e5, false, 'water flow (LPM)');
+        const floors = chk('floors', 1, MAX_FLOORS, true, 'number of floors');
+        const floorPlan = [];
+        if (floors !== null) {
+          for (let k = 0; k < floors; k++) {
+            const row = {};
+            ROOM_KEYS.forEach(rk => {
+              const raw = String(f.floorPlan?.[k]?.[rk.key] ?? '').trim(), v = Number(raw);
+              if (raw === '' || !Number.isInteger(v) || v < 0 || v > MAX_ROOMS)
+                errors.push({ id: `fac-${f.id}-fl${k}-${rk.key}`, msg: `${label}: ${floorName(k)} ${rk.label.toLowerCase()} must be a whole number between 0 and ${MAX_ROOMS}.` });
+              else row[rk.key] = v;
+            });
+            floorPlan.push(row);
+          }
+        }
+        if (areaSqFt !== null && roofSqFt !== null && roofSqFt > areaSqFt)
+          errors.push({ id: fid('roofSqFt'), msg: `${label}: roof area cannot be larger than floor area.` });
+        const { _stash, ...rest } = f;
+        list.push({ ...rest, name, type: FACILITY_TYPES[f.type] ? f.type : 'other', areaSqFt, roofSqFt, capacity, kw, water, floors, floorPlan });
+      });
+      return { list, errors };
+    }
+
+    // Saved setup survives a page refresh (config + custom buildings)
+    const SETUP_KEY = 'campustwin.setup.v1';
+    function persistSetup() {
+      try { localStorage.setItem(SETUP_KEY, JSON.stringify({ config: campusConfig, facilities: customFacilities })); } catch { /* storage unavailable */ }
+    }
+    function restoreSetup() {
+      let saved = null;
+      try { saved = JSON.parse(localStorage.getItem(SETUP_KEY) || 'null'); } catch { return; }
+      if (!saved || typeof saved !== 'object' || !saved.config || typeof saved.config !== 'object') return;
+      const c = saved.config, next = { ...campusConfig };
+      if (!(c.areaSqFt >= 100 && c.areaSqFt <= 1e8)) return;
+      next.areaSqFt = c.areaSqFt;
+      if (typeof c.name === 'string' && c.name.trim() && c.name.length <= 120) next.name = c.name.trim();
+      for (const f of CFG_FIELDS) {
+        const v = Number(c[f.key]);
+        if (!Number.isFinite(v) || v < f.min || v > f.max) return;
+        next[f.key] = v;
+      }
+      if (Number.isFinite(c.rateWaste) && c.rateWaste >= 0 && c.rateWaste <= 1000) next.rateWaste = c.rateWaste;
+
+      let facs = null;
+      if (Array.isArray(saved.facilities) && saved.facilities.length >= 1 && saved.facilities.length <= MAX_BUILDINGS) {
+        facilityDraft = saved.facilities.map(f => ({ ...f }));
+        const r = readFacilities();
+        facilityDraft = null;
+        if (!r.errors.length) facs = r.list;
+      }
+      Object.assign(campusConfig, next);
+      customFacilities = facs;
+      if (facs) campusConfig.buildingCount = facs.length;
+      facilityDraft = facs ? facs.map(f => ({ ...f })) : null;
+
+      $('cfgName').value = campusConfig.name;
+      $('cfgBuildings').value = campusConfig.buildingCount;
+      $('cfgRateElec').value = campusConfig.rateElec.toFixed(2);
+      $('cfgMonthlyKWh').value = campusConfig.monthlyKWh;
+      $('cfgRateWater').value = campusConfig.rateWater.toFixed(2);
+      $('cfgMonthlyWaterKL').value = campusConfig.monthlyWaterKL;
+      $('cfgStudents').value = campusConfig.students;
+      rebuildBuildings();
+    }
+
+    // Field rules mirror the server (POST /api/campus/configure)
+    const CFG_FIELDS = [
+      { key: 'buildingCount', id: 'cfgBuildings', label: 'Number of buildings', min: 1, max: MAX_BUILDINGS, int: true },
+      { key: 'rateElec', id: 'cfgRateElec', label: 'Electricity tariff', min: 0.01, max: 1000 },
+      { key: 'monthlyKWh', id: 'cfgMonthlyKWh', label: 'Monthly energy consumption', min: 1, max: 1e9 },
+      { key: 'rateWater', id: 'cfgRateWater', label: 'Water supply rate', min: 0.01, max: 10000 },
+      { key: 'monthlyWaterKL', id: 'cfgMonthlyWaterKL', label: 'Monthly water consumption', min: 1, max: 1e7 },
+      { key: 'students', id: 'cfgStudents', label: 'Student and faculty population', min: 1, max: 1e6, int: true }
+    ];
+    function readConfigForm() {
+      const errors = [];
+      const out = { name: $('cfgName').value.trim() };
+      document.querySelectorAll('#tab-customizer [aria-invalid]').forEach(el => el.removeAttribute('aria-invalid'));
+      if (!out.name || out.name.length > 120) errors.push({ id: 'cfgName', msg: 'Enter the college name (up to 120 characters).' });
+      if (!(campusConfig.areaSqFt >= 100 && campusConfig.areaSqFt <= 1e8)) errors.push({ id: 'cfgArea', msg: 'Campus area must be between 100 and 100,000,000 sq.ft.' });
+      CFG_FIELDS.forEach(f => {
+        const raw = $(f.id).value.trim();
+        const v = Number(raw);
+        if (raw === '' || !Number.isFinite(v) || v < f.min || v > f.max || (f.int && !Number.isInteger(v)))
+          errors.push({ id: f.id, msg: `${f.label} must be ${f.int ? 'a whole number' : 'a number'} between ${fmtNum(f.min, f.min < 1 ? 2 : 0)} and ${fmtNum(f.max)}.` });
+        else out[f.key] = v;
+      });
+      return { out, errors };
+    }
+
+    function saveCollegeConfig(showFeedback = true) {
+      const { out, errors } = readConfigForm();
+      let facs = null;
+      if (facilityDraft) { const r = readFacilities(); facs = r.list; errors.push(...r.errors); }
+      const box = $('cfgError');
+      if (errors.length) {
+        box.classList.remove('hidden');
+        box.innerHTML = '<strong>Please fix:</strong><ul class="list-disc ml-4 mt-1">' + errors.map(e => `<li>${esc(e.msg)}</li>`).join('') + '</ul>';
+        errors.forEach(e => { const el = $(e.id); if (el) el.setAttribute('aria-invalid', 'true'); });
+        const firstBad = $(errors[0].id);
+        if (firstBad) { const det = firstBad.closest('details'); if (det) det.open = true; firstBad.focus(); }
+        return false;
+      }
+      box.classList.add('hidden');
+      Object.assign(campusConfig, out);
+      customFacilities = facs;
+      if (facs) { campusConfig.buildingCount = facs.length; facilityDraft = facs.map(f => ({ ...f })); }
+      rebuildBuildings();
+      renderFacilityEditor();
+      persistSetup();
+      populateBuildingSelect();
+      renderCampusMeta();
+      updateQuickDemoLabels();
+      afterTelemetryChange();
+
+      fetch('/api/campus/configure', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...campusConfig })
+      }).then(r => r.json().catch(() => ({})).then(j => {
+        if (!r.ok || j.ok === false) showToast('Saved locally; server said: ' + (j.error || 'HTTP ' + r.status), 'warn');
+      })).catch(() => console.warn('[CampusTwin] Backend offline - running in local mode'));
+      fetch('/api/campus/facilities', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ facilities: customFacilities })
+      }).catch(() => { /* offline: the list is still saved in this browser */ });
+
+      if (showFeedback) {
+        showToast(`${campusConfig.name} saved: ${campusBuildings.length} buildings, baseline ${formatINR(campusConfig.monthlyKWh * campusConfig.rateElec)}/month electricity.`);
+        announce('College details saved. Digital twin recalibrated.');
+        switchTab('twin');
+      }
+      return true;
+    }
+
+    function loadSampleCollege(preset) {
+      const P = {
+        apex:  { name: 'Apex Institute of Technology', area: 252000, b: 6,  e: 9.50,  kwh: 125000, w: 45, kl: 1800, s: 4800 },
+        state: { name: 'State Government Engineering College', area: 165000, b: 5, e: 8.25, kwh: 85000, w: 38, kl: 1400, s: 3200 },
+        metro: { name: 'Metro Technological University Campus', area: 420000, b: 10, e: 10.75, kwh: 240000, w: 52, kl: 3200, s: 8500 }
+      }[preset] || null;
+      if (!P) return;
+      $('cfgName').value = P.name;
+      facilityDraft = null;   // a sample college uses auto-generated buildings
+      renderFacilityEditor();
+      campusConfig.areaSqFt = P.area;
+      setAreaUnit('sqft');
+      $('cfgBuildings').value = P.b; $('cfgRateElec').value = P.e.toFixed(2); $('cfgMonthlyKWh').value = P.kwh;
+      $('cfgRateWater').value = P.w.toFixed(2); $('cfgMonthlyWaterKL').value = P.kl; $('cfgStudents').value = P.s;
+      updateAreaEquivText();
+      updateLiveCollegeBaseline();
+      announce('Loaded sample college ' + P.name + '. Press Save to apply.');
+    }
+
+    // =====================================================================
+    // Live sensor test (Step 4) + backend telemetry
+    // =====================================================================
+    let webhookStatusTimer = null;
+    function setWebhookStatus(html, resetAfterMs) {
+      const st = $('webhookStatus');
+      st.innerHTML = html;
+      clearTimeout(webhookStatusTimer);
+      webhookStatusTimer = resetAfterMs ? setTimeout(() => { st.textContent = 'Ready to transmit packet'; }, resetAfterMs) : null;
+    }
+
+    function sendLiveWebhook() {
+      const bldgId = $('simBldg').value;
+      const vals = { kw: $('simKw').value, water: $('simWater').value, temp: $('simTemp').value, empty: $('simEmpty').value };
+      const rules = [['kw', 'Power draw', 0, 100000], ['water', 'Water flow', 0, 100000], ['temp', 'Indoor temperature', 0, 60], ['empty', 'Empty rooms', 0, 10000]];
+      for (const [k, label, min, max] of rules) {
+        const n = Number(vals[k]);
+        if (vals[k].trim() === '' || !Number.isFinite(n) || n < min || n > max) {
+          setWebhookStatus(`<span class="text-amber-400 font-bold font-mono">⚠ ${label} must be a number from ${min} to ${max}</span>`);
+          $({ kw: 'simKw', water: 'simWater', temp: 'simTemp', empty: 'simEmpty' }[k]).focus();
+          return;
+        }
+      }
+      applyPacketToTwin(bldgId, Number(vals.kw), Number(vals.water), Number(vals.temp), Math.round(Number(vals.empty)));
+    }
+
+    function triggerQuickDemo(type) {
+      const b = findB('b1');
+      if (!b) return;
+      const spike = type === 'spike';
+      const kw = round1(b.kwNom * (spike ? 148.5 / 118.5 : 58.2 / 118.5));
+      const water = round1(b.waterNom * (spike ? 32.0 / 24.2 : 18.0 / 24.2));
+      const temp = spike ? 27.8 : 24.0, empty = spike ? 4 : 0;
+      $('simBldg').value = 'b1'; $('simKw').value = kw; $('simWater').value = water; $('simTemp').value = temp; $('simEmpty').value = empty;
+      applyPacketToTwin('b1', kw, water, temp, empty);
+    }
+    function updateQuickDemoLabels() {
+      const b = findB('b1');
+      if (!b) return;
+      $('demoSpikeKw').textContent = round1(b.kwNom * 148.5 / 118.5);
+      $('demoDropKw').textContent = round1(b.kwNom * 58.2 / 118.5);
+    }
+
+    function applyPacketToTwin(bldgId, kw, water, temp, empty) {
+      const target = findB(bldgId);
+      if (target) setLive(bldgId, { kw, water, temp, empty, ts: Date.now() });
+      afterTelemetryChange();
+
+      const timeStr = new Date().toLocaleTimeString('en-IN');
+      $('footerTelemetryMsg').textContent = `Live Telemetry Ingested for ${target ? target.code : bldgId} at ${timeStr}`;
+      const toast = $('ingestToast'), toastMsg = $('ingestToastMsg');
+      toast.classList.remove('hidden');
+      toastMsg.textContent = 'Sending packet to server...';
+      setWebhookStatus(`<span class="text-slate-300 font-mono">Sent at ${timeStr}...</span>`);
+
+      fetch('/api/campus/ingest', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ buildingId: bldgId, powerDrawKW: kw, waterFlowLPM: water, indoorTempC: temp, emptyRoomsWithPowerOn: empty, deviceId: 'web-sensor-test', timestamp: new Date().toISOString() })
+      })
+        .then(r => r.json().catch(() => ({})).then(j => ({ ok: r.ok && j.ok !== false, j })))
+        .then(res => {
+          const nm = target ? target.name : bldgId;
+          if (res.ok) {
+            toastMsg.textContent = '\u2713 200 OK: server stored the packet for ' + nm + ' (' + kw + ' kW). The simulator baseline now follows it.';
+            setWebhookStatus('<span class="text-cyan-400 font-bold font-mono">\u2713 200 OK stored by server</span>', 4000);
+          } else {
+            toastMsg.textContent = '\u26a0 Server rejected the packet: ' + ((res.j && res.j.error) || 'unknown error') + ' (shown locally only).';
+            setWebhookStatus('<span class="text-amber-400 font-bold font-mono">\u26a0 Rejected by server</span>', 4000);
+          }
+        })
+        .catch(() => {
+          toastMsg.textContent = '\u26a0 Server unreachable: packet shown locally only (demo mode).';
+          setWebhookStatus('<span class="text-amber-400 font-bold font-mono">\u26a0 Server offline - local demo</span>', 4000);
+        });
+    }
+
+    // Pull readings other devices sent to the server (e.g. the curl example in the README)
+    async function pollTelemetry() {
+      if (document.hidden) return;
+      try {
+        const r = await fetch('/api/campus/buildings', { cache: 'no-store' });
+        if (!r.ok) return;
+        const j = await r.json();
+        let changed = false;
+        (j.buildings || []).forEach(x => {
+          const ts = Date.parse(x.lastUpdate);
+          const b = findB(x.id);
+          if (!b || !Number.isFinite(ts) || Date.now() - ts > LIVE_TTL_MS) return;
+          const cur = liveReadings[x.id];
+          if (cur && (cur.ts >= ts || (cur.kw === x.kw && cur.water === x.water && cur.temp === x.temp && cur.empty === x.empty))) return;
+          setLive(x.id, { kw: x.kw, water: x.water, temp: x.temp, empty: x.empty, ts });
+          changed = true;
+        });
+        if (changed) afterTelemetryChange();
+      } catch { /* server offline: stay in local demo mode */ }
+    }
+
+    // Continuous streamer
+    let continuousStreamTimer = null;
+    function toggleContinuousStream() {
+      const btn = $('btnContinuousStream'), txt = $('txtContinuousStream'), dot = btn.querySelector('span:first-child');
+      if (continuousStreamTimer) {
+        clearInterval(continuousStreamTimer);
+        continuousStreamTimer = null;
+        txt.textContent = 'Continuous Streamer: OFF';
+        btn.className = 'px-4 py-2 rounded-xl text-xs font-bold font-mono bg-slate-900 text-slate-300 border border-slate-700 hover:border-emerald-500 transition-all flex items-center space-x-2';
+        dot.className = 'w-2 h-2 rounded-full bg-slate-500';
+        btn.setAttribute('aria-pressed', 'false');
+      } else {
+        txt.textContent = 'Continuous Streamer: ACTIVE (ON)';
+        btn.className = 'px-4 py-2 rounded-xl text-xs font-bold font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 glow-emerald transition-all flex items-center space-x-2 animate-pulse';
+        dot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-ping';
+        btn.setAttribute('aria-pressed', 'true');
+        streamRandomPacket();
+        continuousStreamTimer = setInterval(streamRandomPacket, 4000);
+      }
+    }
+    function streamRandomPacket() {
+      const bldg = campusBuildings[Math.floor(Math.random() * campusBuildings.length)];
+      if (!bldg) return;
+      // Stay within +-8% of the building's nominal load so the baseline cannot drift away
+      const kw = round1(bldg.kwNom * (1 + (Math.random() * 0.16 - 0.08)));
+      const water = round1(Math.max(1, bldg.waterNom * (1 + (Math.random() * 0.16 - 0.08))));
+      const temp = round1(bldg.tempNom + (Math.random() * 0.8 - 0.4));
+      applyPacketToTwin(bldg.id, kw, water, temp, Math.floor(Math.random() * 3));
+    }
+
+    // =====================================================================
+    // Auto-play demo (every timer is tracked so Exit really stops everything)
+    // =====================================================================
+    let demoActive = false, demoStep = 0;
+    const demoTimers = new Set();
+    function demoDelay(fn, ms) {
+      const id = setTimeout(() => { demoTimers.delete(id); if (demoActive) fn(); }, ms);
+      demoTimers.add(id);
+    }
+    function startAutoDemo() {
+      stopAutoDemo();
+      demoActive = true;
+      demoStep = 1;
+      $('autoDemoBanner').classList.remove('hidden');
+      runDemoStep();
+    }
+    function stopAutoDemo() {
+      demoActive = false;
+      demoStep = 0;
+      demoTimers.forEach(clearTimeout);
+      demoTimers.clear();
+      clearTimeout(webhookStatusTimer);
+      webhookStatusTimer = null;
+      const banner = $('autoDemoBanner');
+      if (banner) banner.classList.add('hidden');
+      const bar = $('demoProgressBar');
+      if (bar) bar.style.width = '0%';
+    }
+    function runDemoStep() {
+      const badge = $('demoStepBadge'), text = $('demoStepText'), bar = $('demoProgressBar');
+      const next = () => { demoStep++; runDemoStep(); };
+      if (demoStep === 1) {
+        switchTab('customizer', { auto: true });
+        badge.textContent = 'STEP 1 OF 4';
+        text.textContent = `1. Entering Campus Baseline: ${fmtNum(campusConfig.areaSqFt)} sq.ft, ${campusConfig.buildingCount} buildings, ₹${campusConfig.rateElec.toFixed(2)}/kWh commercial electricity tariff...`;
+        bar.style.width = '20%';
+        demoDelay(() => { saveCollegeConfig(false); next(); }, 8000);
+      } else if (demoStep === 2) {
+        switchTab('twin', { auto: true });
+        badge.textContent = 'STEP 2 OF 4';
+        text.textContent = '2. Digital Twin Campus Map: Monitoring live kW draw & spotting empty lecture halls with running ACs...';
+        bar.style.width = '40%';
+        setLayer('energy');
+        demoDelay(() => setLayer('water'), 2000);
+        demoDelay(() => setLayer('energy'), 5000);
+        demoDelay(next, 8000);
+      } else if (demoStep === 3) {
+        switchTab('simulator', { auto: true });
+        badge.textContent = 'STEP 3 OF 4';
+        text.textContent = '3. Simulating Interventions: Applying 70% motion sensors & 45% rooftop solar PV, then reading the new bill and payback...';
+        bar.style.width = '65%';
+        applyPreset(70, 1.0, 45, 80, 40, 60, 70);
+        demoDelay(next, 9000);
+      } else if (demoStep === 4) {
+        switchTab('connect', { auto: true });
+        badge.textContent = 'STEP 4 OF 4';
+        text.textContent = '4. Live IoT Webhook: Transmitting sensor packets to POST /api/campus/ingest; the simulator baseline follows them...';
+        bar.style.width = '85%';
+        triggerQuickDemo('spike');
+        demoDelay(() => triggerQuickDemo('drop'), 3500);
+        demoDelay(next, 8000);
+      } else if (demoStep === 5) {
+        openReportModal();
+        badge.textContent = 'SUMMARY';
+        text.textContent = '5. Executive Brief: Data-backed ROI proposal generated in Indian Rupees for the Principal & Dean!';
+        bar.style.width = '100%';
+        demoDelay(stopAutoDemo, 9000);
+      }
+    }
+
+    function switchCodeSnippet(snip) {
+      ['python', 'esp32', 'curl'].forEach(s => {
+        $('snip-' + s).classList.add('hidden');
+        $('btn-snip-' + s).className = 'px-3 py-1 rounded-lg text-slate-400 hover:text-white';
+        $('btn-snip-' + s).setAttribute('aria-pressed', 'false');
+      });
+      $('snip-' + snip).classList.remove('hidden');
+      $('btn-snip-' + snip).className = 'px-3 py-1 rounded-lg bg-slate-800 text-emerald-400 font-bold';
+      $('btn-snip-' + snip).setAttribute('aria-pressed', 'true');
+    }
+
+    // =====================================================================
+    // AI planner
+    // =====================================================================
+    function currentSliderValues() {
+      const o = {};
+      Object.keys(SLIDER_IDS).forEach(k => { o[k] = Number($(SLIDER_IDS[k]).value); });
+      return o;
+    }
+    // What the planner needs to answer building-specific what-ifs ("solar on the hostels only")
+    function campusContextForAI() {
+      const c = campusConfig;
+      return {
+        name: c.name, areaSqFt: Math.round(c.areaSqFt), monthlyKWh: c.monthlyKWh, monthlyWaterKL: c.monthlyWaterKL,
+        buildings: campusBuildings.slice(0, MAX_BUILDINGS).map(b => ({
+          name: b.name, type: b.type || null, areaSqFt: b.areaSqFt, roofSqFt: b.roofSqFt, kw: b.kwNom, water: b.waterNom
+        }))
+      };
+    }
+
+    const AI_LABELS = {
+      sensors: ['Occupancy sensors', v => v + '%'], solar: ['Rooftop solar', v => v + '%'], hvac: ['AC setpoint', v => '+' + v + '°C'],
+      aerators: ['Tap aerators & leak fixes', v => v + '%'], rain: ['Rainwater harvesting', v => v + '%'],
+      waste: ['Waste segregation', v => v + '%'], plastic: ['Plastic reduction', v => v + '%']
+    };
+    function showAIResult(r) {
+      const chips = r.sliders ? Object.keys(AI_LABELS).filter(k => Number(r.sliders[k]) > 0)
+        .map(k => `<span class="fac-chip" style="background:#064e3b;color:#a7f3d0">${esc(AI_LABELS[k][0])} ${esc(AI_LABELS[k][1](r.sliders[k]))}</span>`).join('') : '';
+      $('aiResult').innerHTML =
+        `<span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300 mr-1">${esc(r.via)}</span><span>${esc(r.explanation)}</span>` +
+        (chips ? `<div class="flex flex-wrap gap-1 mt-2">${chips}</div>` : '') +
+        (r.unsupported ? `<div class="mt-2 text-amber-300">Not modelled by the sliders: ${esc(r.unsupported)}</div>` : '');
+    }
+    function renderAIExamples() {
+      $('aiExamples').innerHTML = CampusPlanner.EXAMPLES.map((ex, i) =>
+        `<button type="button" onclick="askAI(CampusPlanner.EXAMPLES[${i}])" class="px-2.5 py-1 rounded-full text-[11px] bg-slate-900 border border-slate-700 text-slate-300 hover:border-emerald-500 hover:text-emerald-300">${esc(ex)}</button>`).join('');
+    }
+
+    // Asks the server (Claude or its offline rules). If the server cannot be reached or refuses,
+    // the same offline rules run right here in the browser, so the planner always answers.
+    async function askAI(text) {
+      const input = $('aiQuestion');
+      if (typeof text === 'string') input.value = text;
+      const q = input.value.trim();
+      const out = $('aiResult'), btn = $('aiBtn');
+      if (!q) { out.textContent = 'Describe a situation or a what-if first, for example: our power bill is too high.'; return; }
+      btn.disabled = true;
+      out.textContent = 'Thinking...';
+      const current = currentSliderValues(), campus = campusContextForAI();
+      let j = null, reason = '';
+      try {
+        const ctl = new AbortController();
+        const timer = setTimeout(() => ctl.abort(), 35000);
+        try {
+          const r = await fetch('/api/ai/suggest', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: ctl.signal,
+            body: JSON.stringify({ question: q, current, campus })
+          });
+          const body = await r.json().catch(() => null);
+          if (r.ok && body && body.ok && body.sliders && typeof body.sliders === 'object') j = body;
+          else reason = (body && body.error) || ('server answered HTTP ' + r.status);
+        } finally { clearTimeout(timer); }
+      } catch (e) {
+        reason = e.name === 'AbortError' ? 'server took too long' : 'server not reachable';
+      }
+      try {
+        if (!j) j = { ...CampusPlanner.fallback(q, current, campus), source: 'fallback', fallbackReason: reason };
+        const via = j.source === 'fallback' ? 'Offline rules' + (j.fallbackReason ? ' · ' + j.fallbackReason : '') : ({ claude: 'Claude', gemini: 'Gemini' }[j.source] || 'AI');
+        const sliders = CampusPlanner.clampSliders(j.sliders);
+        if (j.matched === false) {
+          showAIResult({ via, explanation: String(j.explanation || 'That did not map to a simulator measure.') + ' Sliders were left unchanged.', unsupported: j.unsupported });
+          return;
+        }
+        Object.keys(SLIDER_IDS).forEach(k => { $(SLIDER_IDS[k]).value = sliders[k]; });
+        calculateSimulation();
+        showAIResult({ via, explanation: String(j.explanation || 'Settings suggested by the AI planner.') + ' Sliders updated.', sliders, unsupported: j.unsupported });
+        announce('AI planner updated the simulator sliders.');
+      } catch (e) {
+        out.textContent = 'AI planner error: ' + e.message;
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    // =====================================================================
+    // Background loops (paused while the tab is hidden)
+    // =====================================================================
+    function tickDemoMeters() {
+      if (document.hidden) return;
+      const now = Date.now();
+      campusBuildings.forEach(b => {
+        const r = liveReadings[b.id];
+        if (r && now - r.ts > LIVE_TTL_MS) clearLive(b);   // stale telemetry stops feeding the model
+        if (!b.isLive) {                                   // simulated buildings breathe around their nominal load
+          b.kw = round1(b.kwNom * (1 + (Math.random() * 0.03 - 0.015)));
+          b.water = round1(b.waterNom * (1 + (Math.random() * 0.03 - 0.015)));
+        }
+      });
+      refreshBuildingViews();
+      updateTopMeters();
+      updateTelemetryBadge();
+    }
+
+    async function checkGateway() {
+      const foot = $('footerTelemetryMsg'), gw = $('gatewayLabel');
+      const host = location.host || 'localhost:5000';
+      try {
+        const r = await fetch('/api/health', { cache: 'no-store' });
+        const j = await r.json();
+        if (!r.ok || !j.ok) throw new Error('bad status');
+        foot.textContent = `Gateway online at ${host} • AI planner: ${({ claude: 'Claude', gemini: 'Gemini' })[j.ai] || 'offline rules'}`;
+        gw.textContent = 'Gateway: online (' + host + ')';
+      } catch {
+        foot.textContent = 'Gateway not reachable • running in local demo mode';
+        gw.textContent = 'Gateway: offline (local demo)';
+      }
+    }
+
+    // =====================================================================
+    // Init
+    // =====================================================================
+    restoreSetup();
+    setAreaUnit('sqft');
+    updateLiveCollegeBaseline();
+    renderFacilityEditor();
+    populateBuildingSelect();
+    refreshBuildingViews();
+    renderCampusMeta();
+    updateTopMeters();
+    updateTelemetryBadge();
+    updateQuickDemoLabels();
+    calculateSimulation();
+    setNavState('twin');
+    renderAIExamples();
+    checkGateway();
+    pollTelemetry();
+    setInterval(tickDemoMeters, 3000);
+    setInterval(pollTelemetry, 5000);
+
+
+    // ---- v4: page titles, mobile menu, clickable logo, footer year, success/error messages ----
+    function syncChrome(tab) {
+      const titles = { customizer: 'College Details', twin: 'Digital Twin', simulator: 'What-If Simulator and Bill', connect: 'Live Sensor Test' };
+      document.title = (titles[tab] || 'Digital Twin') + ' | CampusTwin';
+      ['customizer', 'twin', 'simulator', 'connect'].forEach(t => {
+        const m = document.getElementById('mnu-' + t); if (!m) return;
+        const on = t === tab;
+        m.classList.toggle('bg-emerald-500/15', on); m.classList.toggle('font-bold', on);
+        if (on) m.setAttribute('aria-current', 'page'); else m.removeAttribute('aria-current');
+      });
+    }
+    function toggleMobileMenu(force) {
+      const menu = document.getElementById('mobileMenu'), btn = document.getElementById('menuBtn');
+      if (!menu || !btn) return;
+      const open = typeof force === 'boolean' ? force : menu.classList.contains('hidden');
+      menu.classList.toggle('hidden', !open);
+      btn.setAttribute('aria-expanded', String(open));
+      btn.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+      document.getElementById('menuIconOpen').classList.toggle('hidden', open);
+      document.getElementById('menuIconClose').classList.toggle('hidden', !open);
+    }
+    function closeMobileMenu() { toggleMobileMenu(false); }
+    function goHome(e) { if (e) e.preventDefault(); closeMobileMenu(); switchTab('twin'); window.scrollTo(0, 0); }
+    function uiOk(msg) { showToast(msg, 'ok'); }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMobileMenu(); });
+    document.addEventListener('click', e => {
+      const m = document.getElementById('mobileMenu'), b = document.getElementById('menuBtn');
+      if (m && b && !m.classList.contains('hidden') && !m.contains(e.target) && !b.contains(e.target)) closeMobileMenu();
+    });
+    window.matchMedia('(min-width: 768px)').addEventListener('change', e => { if (e.matches) closeMobileMenu(); });
+
+    let lastFailureAt = 0;
+    function reportFailure() {
+      const n = Date.now(); if (n - lastFailureAt < 4000) return; lastFailureAt = n;
+      showToast('Something went wrong. Please try again, or reload the page if it keeps happening.', 'error');
+    }
+    window.addEventListener('error', e => { if (e && /ResizeObserver/.test(e.message || '')) return; reportFailure(); });
+    window.addEventListener('unhandledrejection', () => reportFailure());
+    window.addEventListener('offline', () => showToast('You are offline. The simulator still works, but sensor data will not reach the server.', 'warn'));
+    window.addEventListener('online', () => showToast('Back online.', 'ok'));
+    (function () { const y = document.getElementById('copyYear'); if (y) y.textContent = new Date().getFullYear(); })();
+
+  </script>
+
+
+</body></html>
